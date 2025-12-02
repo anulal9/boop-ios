@@ -18,30 +18,43 @@ struct BoopView: View {
     }
     
     var body: some View {
-        ZStack {
-            Text("Timeline").foregroundColor(Color.white).font(.title).fontWeight(.bold).fontDesign(.rounded)
-            Spacer()
-            List {
-                ForEach(entries) { entry in
-                    NavigationLink {
-                        Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
-                    } label: {
-                        Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationView {
+            ZStack {
+                VStack {
+                    List {
+                        ForEach(entries) { entry in
+                            NavigationLink {
+                                Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
+                            } label: {
+                                Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                            }
+                        }
+                        .onDelete(perform: deleteEntry)
                     }
                 }
-                .onDelete(perform: deleteEntry)
-            }.background(Color.pink)
-            
-            if showBoop {
-                Color.black.opacity(0.4).ignoresSafeArea() // dim background
-                VStack(spacing: 20) {
-                    Text("Boop!").font(.title)
-                    Text(boopViewModel.getLastBoopUserFromAnimationQueue())
-                }.background(Color.pink)
+                .navigationTitle("Timeline")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        NavigationLink(destination: ConnectView()) {
+                            Label("Connect", systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                    }
+                }
+                
+                if showBoop {
+                    Color.black.opacity(0.4).ignoresSafeArea() // dim background
+                    VStack(spacing: 20) {
+                        Text("Boop!").font(.title)
+                        Text(boopViewModel.getLastBoopUserFromAnimationQueue())
+                    }
+                    .padding()
+                    .background(Color.pink)
+                    .cornerRadius(10)
+                }
             }
+            .animation(.easeInOut(duration: 10), value: showBoop)
+            .onDisappear(perform: insertEntry)
         }
-        .animation(.easeInOut(duration: 10), value: showBoop)
-        .onDisappear(perform: insertEntry)
     }
         
     private func deleteEntry(offsets: IndexSet) {
