@@ -13,11 +13,12 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     @Published private(set) var authState: AuthState = .signedOut
 
-    private let userDefaultsKey = "appleUserID"
+    private let appleIDKey = "appleUserID"
+    private let fullNameKey = "appleFullName"
 
     override init() {
         super.init()
-        if let cachedUser = UserDefaults.standard.string(forKey: userDefaultsKey) {
+        if let cachedUser = UserDefaults.standard.string(forKey: appleIDKey) {
             authState = .signedIn(userID: cachedUser)
         }
     }
@@ -38,7 +39,7 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
         case .success(let authorization):
             switch authorization.credential {
             case let credential as ASAuthorizationAppleIDCredential:
-                handleSuccess(userID: credential.user)
+                handleSuccess(credential: credential)
             default:
                 handleFailure("Unsupported credential")
             }
@@ -47,9 +48,11 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
         }
     }
 
-    private func handleSuccess(userID: String) {
-        UserDefaults.standard.set(userID, forKey: userDefaultsKey)
-        authState = .signedIn(userID: userID)
+    private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
+        UserDefaults.standard.set(credential.user, forKey: appleIDKey)
+        UserDefaults.standard.set(credential.fullName, forKey:
+                                    fullNameKey)
+        authState = .signedIn(userID: credential.user)
     }
 
     private func handleFailure(_ message: String) {
@@ -61,7 +64,7 @@ extension AppleAuthViewModel: ASAuthorizationControllerDelegate {
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         switch authorization.credential {
         case let credential as ASAuthorizationAppleIDCredential:
-            handleSuccess(userID: credential.user)
+            handleSuccess(credential: credential)
         default:
             handleFailure("Unsupported credential")
         }
