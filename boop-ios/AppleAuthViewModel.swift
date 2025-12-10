@@ -57,8 +57,10 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
         UserDefaults.standard.set(credential.user, forKey: appleIDKey)
-        UserDefaults.standard.set(credential.fullName, forKey:
-                                    fullNameKey)
+        if let firstName = credential.fullName?.givenName {
+            UserDefaults.standard.set(firstName, forKey:
+                                        fullNameKey)
+        }
         authState = .signedIn(userID: credential.user)
     }
 
