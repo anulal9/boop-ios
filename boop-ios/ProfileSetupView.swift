@@ -5,7 +5,7 @@ struct ProfileSetupView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var firstName = ""
     @State private var lastName = ""
-    @State private var dateOfBirth = Date(timeIntervalSinceNow: -18 * 365.25 * 86400) // Default to 18 years ago
+    @State private var dateOfBirth = Date() // Default to 18 years ago
     @State private var errorMessage: String?
     @State private var isLoading = false
 
