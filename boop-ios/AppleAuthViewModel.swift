@@ -8,17 +8,23 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
         case signedOut
         case authorizing
         case signedIn(userID: String)
+        case profileSetup
+        case completed
         case failed(String)
     }
 
     @Published private(set) var authState: AuthState = .signedOut
+    @Published private(set) var userID: String?
 
     private let userDefaultsKey = "appleUserID"
+    private let profileCompleteKey = "profileComplete"
 
     override init() {
         super.init()
         if let cachedUser = UserDefaults.standard.string(forKey: userDefaultsKey) {
-            authState = .signedIn(userID: cachedUser)
+            let isComplete = UserDefaults.standard.bool(forKey: profileCompleteKey)
+            authState = isComplete ? .completed : .profileSetup
+            self.userID = cachedUser
         }
     }
 
@@ -49,11 +55,17 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     private func handleSuccess(userID: String) {
         UserDefaults.standard.set(userID, forKey: userDefaultsKey)
-        authState = .signedIn(userID: userID)
+        self.userID = userID
+        authState = .profileSetup
     }
 
     private func handleFailure(_ message: String) {
         authState = .failed(message)
+    }
+
+    func completeProfileSetup() {
+        UserDefaults.standard.set(true, forKey: profileCompleteKey)
+        authState = .completed
     }
 }
 
