@@ -7,8 +7,10 @@ struct RootView: View {
     var body: some View {
         Group {
             switch authViewModel.authState {
-            case .signedIn:
+            case .completed:
                 BoopView()
+            case .profileSetup:
+                ProfileSetupView(authViewModel: authViewModel)
             case .authorizing:
                 VStack(spacing: 12) {
                     ProgressView()
@@ -24,7 +26,7 @@ struct RootView: View {
                     signInButton
                 }
                 .padding()
-            case .signedOut:
+            case .signedOut, .signedIn:
                 VStack(spacing: 24) {
                     Text("Welcome to Boop")
                         .font(.title2)
