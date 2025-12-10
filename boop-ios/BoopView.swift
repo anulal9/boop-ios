@@ -36,12 +36,12 @@ struct BoopView: View {
                 Color.black.opacity(0.4).ignoresSafeArea() // dim background
                 VStack(spacing: 20) {
                     Text("Boop!").font(.title)
-                    Text(boopViewModel.getLastBoopUserFromAnimationQueue())
+                    Text(insertEntryAndGetUserText())
                 }.background(Color.pink)
             }
         }
         .animation(.easeInOut(duration: 10), value: showBoop)
-        .onDisappear(perform: insertEntry)
+        .onDisappear()
     }
         
     private func deleteEntry(offsets: IndexSet) {
@@ -52,9 +52,9 @@ struct BoopView: View {
         }
     }
     
-    private func insertEntry() {
+    private func insertEntryAndGetUserText() -> String {
+        let userString = boopViewModel.getBoopUserFromAnimationQueueAndRemove()
         withAnimation {
-            let userString = boopViewModel.getBoopUserFromAnimationQueueAndRemove()
             if (userString != "") {
                 let user = UUID(uuidString: userString)
                 if let nonnulluser = user {
@@ -62,5 +62,7 @@ struct BoopView: View {
                 }
             }
         }
+        return userString
     }
 }
+

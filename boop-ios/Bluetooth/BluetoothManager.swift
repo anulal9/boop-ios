@@ -190,6 +190,7 @@ extension BluetoothManager: BluetoothServiceDelegate {
         print("🗑️ BT Manager: didRemoveDevice(\(deviceID.uuidString.prefix(8)))")
         // Remove from nearby devices
         nearbyDevices.removeValue(forKey: deviceID)
+        connectedPeripherals.removeValue(forKey: deviceID)
         print("✅ BT Manager: Removed device from nearbyDevices - total: \(nearbyDevices.count)")
         print("📊 BT Manager: State after removal - nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
