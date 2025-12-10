@@ -26,6 +26,7 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
             let isComplete = UserDefaults.standard.bool(forKey: profileCompleteKey)
             authState = isComplete ? .completed : .profileSetup
             self.userID = cachedUser
+            authState = .signedIn(userID: cachedUser)
         }
     }
 
