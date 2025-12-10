@@ -23,7 +23,6 @@ struct ProfileSetupView: View {
     var canSubmit: Bool {
         !firstName.trimmingCharacters(in: .whitespaces).isEmpty
             && !lastName.trimmingCharacters(in: .whitespaces).isEmpty
-            && isAdult
     }
 
     var body: some View {
@@ -36,21 +35,10 @@ struct ProfileSetupView: View {
 
                 Section(header: Text("Date of Birth")) {
                     DatePicker(
-                        "DOB",
+                        "Select date",
                         selection: $dateOfBirth,
                         displayedComponents: [.date]
                     )
-                    Text("Age: \(age)")
-                        .foregroundColor(isAdult ? .green : .red)
-                        .font(.caption)
-                }
-
-                if !isAdult {
-                    Section {
-                        Text("You must be at least 18 years old to use Boop.")
-                            .foregroundColor(.red)
-                            .font(.caption)
-                    }
                 }
 
                 if let errorMessage = errorMessage {
