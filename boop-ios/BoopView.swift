@@ -64,7 +64,3 @@ struct BoopView: View {
         }
     }
 }
-#Preview {
-    ContentView()
-        .modelContainer(for: Entry.self, inMemory: true)
-}

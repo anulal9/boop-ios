@@ -25,7 +25,7 @@ struct boop_iosApp: App {
 
     var body: some Scene {
         WindowGroup {
-            BoopView()
+            RootView()
         }
         .modelContainer(sharedModelContainer)
     }
