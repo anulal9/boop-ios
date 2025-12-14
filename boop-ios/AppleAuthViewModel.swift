@@ -18,15 +18,19 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     private let appleIDKey = "appleUserID"
     private let profileCompleteKey = "profileComplete"
-    private let fullNameKey = "appleFullName"
+    private let userNameKey = "boopUserName"
+    private let firstNameKey = "boopFirstName"
+    private let lastNameKey = "boopLastName"
+    private let birthDateKey = "boopBirthday"
+    private let isAdultKey = "boopIsAdult"
 
     override init() {
         super.init()
         Task {
             // Safe to read UserDefaults now - directory is guaranteed to exist
-            if let cachedUser = await GetFromUserDefaultsString(key: appleIDKey) {
+            if let cachedUser = await UserDefaultsUtility.getString(forKey: appleIDKey) {
                 self.userID = cachedUser
-                let isComplete = await GetFromUserDefaultsBool(key: profileCompleteKey)
+                let isComplete = await UserDefaultsUtility.getBool(forKey: profileCompleteKey)
                 authState = isComplete ? .completed : .profileSetup
             }
         }
@@ -51,11 +55,8 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
-        UpdateUserDefaults(value: credential.user, key: appleIDKey)
+        UserDefaultsUtility.set(credential.user, forKey: appleIDKey)
         self.userID = credential.user
-        if let firstName = credential.fullName?.givenName {
-            UpdateUserDefaults(value: firstName, key: fullNameKey)
-        }
         authState = .profileSetup
     }
 
@@ -63,31 +64,20 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
         authState = .failed(message)
     }
 
-    func completeProfileSetup() {
-        UpdateUserDefaults(value: true, key: profileCompleteKey)
+    func completeProfileSetup(userProfile: UserProfile) {
+        UserDefaultsUtility.set(true, forKey: profileCompleteKey)
         authState = .completed
     }
     
-    private func GetFromUserDefaultsString(key: String) async -> String? {
-            UserDefaults.standard.string(forKey: key)
-    }
-    
-    private func GetFromUserDefaultsBool(key: String) async -> Bool {
-            UserDefaults.standard.bool(forKey: key)
-    }
-    
-    private func UpdateUserDefaults(value: Bool, key: String)
-    {
+    private func saveUserToStore(userProfile: UserProfile) {
         Task {
-            UserDefaults.standard.set(value, forKey: key)
+            await UserDefaultsUtility.setAsync(userProfile.firstName, forKey: firstNameKey)
+            await UserDefaultsUtility.setAsync(userProfile.lastName, forKey: lastNameKey)
+            await UserDefaultsUtility.setAsync(userProfile.displayName, forKey: userNameKey)
+            await UserDefaultsUtility.setAsync(userProfile.dateOfBirth, forKey: birthDateKey)
+            await UserDefaultsUtility.setAsync(userProfile.isAdult, forKey: isAdultKey)
         }
-    }
 
-    private func UpdateUserDefaults(value: String, key: String)
-    {
-        Task {
-            UserDefaults.standard.set(value, forKey: key)
-        }
     }
 }
 
