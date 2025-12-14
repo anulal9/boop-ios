@@ -81,7 +81,7 @@ struct ProfileSetupView: View {
                 dateOfBirth: dateOfBirth
             )
             modelContext.insert(profile)
-            authViewModel.completeProfileSetup()
+            authViewModel.completeProfileSetup(userProfile: profile)
         } else {
             errorMessage = "User ID not available."
             isLoading = false
