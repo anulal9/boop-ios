@@ -56,7 +56,7 @@ class BoopManager: ObservableObject {
             print("🤝 Boop: Queue is empty, cannot boop + remove")
             return UUID()
         }
-        var deviceID = boopQueue.removeFirst()
+        let deviceID = boopQueue.removeFirst()
         // Check if device is connected
         var success = false
         var attempts = 0
