@@ -16,21 +16,13 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     @Published private(set) var authState: AuthState = .signedOut
     @Published private(set) var userID: String?
 
-    private let appleIDKey = "appleUserID"
-    private let profileCompleteKey = "profileComplete"
-    private let userNameKey = "boopUserName"
-    private let firstNameKey = "boopFirstName"
-    private let lastNameKey = "boopLastName"
-    private let birthDateKey = "boopBirthday"
-    private let isAdultKey = "boopIsAdult"
-
     override init() {
         super.init()
         Task {
             // Safe to read UserDefaults now - directory is guaranteed to exist
-            if let cachedUser = await UserDefaultsUtility.getString(forKey: appleIDKey) {
+            if let cachedUser = await UserDefaultsUtility.getString(forKey: UserDefaultsKeys.appleUserID) {
                 self.userID = cachedUser
-                let isComplete = await UserDefaultsUtility.getBool(forKey: profileCompleteKey)
+                let isComplete = await UserDefaultsUtility.getBool(forKey: UserDefaultsKeys.profileComplete)
                 authState = isComplete ? .completed : .profileSetup
             }
         }
@@ -55,7 +47,7 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
-        UserDefaultsUtility.set(credential.user, forKey: appleIDKey)
+        UserDefaultsUtility.set(credential.user, forKey: UserDefaultsKeys.appleUserID)
         self.userID = credential.user
         authState = .profileSetup
     }
@@ -65,17 +57,17 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     func completeProfileSetup(userProfile: UserProfile) {
-        UserDefaultsUtility.set(true, forKey: profileCompleteKey)
+        UserDefaultsUtility.set(true, forKey: UserDefaultsKeys.profileComplete)
         authState = .completed
     }
     
     private func saveUserToStore(userProfile: UserProfile) {
         Task {
-            await UserDefaultsUtility.setAsync(userProfile.firstName, forKey: firstNameKey)
-            await UserDefaultsUtility.setAsync(userProfile.lastName, forKey: lastNameKey)
-            await UserDefaultsUtility.setAsync(userProfile.displayName, forKey: userNameKey)
-            await UserDefaultsUtility.setAsync(userProfile.dateOfBirth, forKey: birthDateKey)
-            await UserDefaultsUtility.setAsync(userProfile.isAdult, forKey: isAdultKey)
+            await UserDefaultsUtility.setAsync(userProfile.firstName, forKey: UserDefaultsKeys.firstName)
+            await UserDefaultsUtility.setAsync(userProfile.lastName, forKey: UserDefaultsKeys.lastName)
+            await UserDefaultsUtility.setAsync(userProfile.displayName, forKey: UserDefaultsKeys.userName)
+            await UserDefaultsUtility.setAsync(userProfile.dateOfBirth, forKey: UserDefaultsKeys.birthDate)
+            await UserDefaultsUtility.setAsync(userProfile.isAdult, forKey: UserDefaultsKeys.isAdult)
         }
 
     }
