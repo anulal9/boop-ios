@@ -42,7 +42,12 @@ struct boop_iosApp: App {
                 if let container = sharedModelContainer {
                     RootView().modelContainer(container)
                 } else {
-                    Text("Jetskiing....")
+                    VStack
+                    {
+                        Spacer()
+                        ProgressView("Getting Boop Ready for you...")
+                        Spacer()
+                    }
                 }
             }
             .task {

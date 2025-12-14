@@ -12,30 +12,29 @@ struct RootView: View {
             case .profileSetup:
                 ProfileSetupView(authViewModel: authViewModel)
             case .authorizing:
-                VStack(spacing: 12) {
+                VStack(spacing: Spacing.md) {
                     ProgressView()
                     Text("Signing in...")
+                        .subtitleStyle()
                 }
             case .failed(let message):
-                VStack(spacing: 16) {
+                VStack(spacing: Spacing.lg) {
                     Text("Sign in failed")
-                        .font(.headline)
+                        .heading2Style()
                     Text(message)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .subtitleStyle()
                     signInButton
                 }
                 .padding()
             case .signedOut, .signedIn:
-                VStack(spacing: 24) {
+                VStack(spacing: Spacing.xl) {
                     Text("Welcome to Boop")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                        .heading1Style()
                     signInButton
                 }
                 .padding()
             }
-        }
+        }.pageBackground()
     }
 
     private var signInButton: some View {
@@ -44,9 +43,9 @@ struct RootView: View {
         } onCompletion: { result in
             authViewModel.handleCompletion(result)
         }
-        .signInWithAppleButtonStyle(.black)
-        .frame(height: 50)
-        .cornerRadius(8)
+        .signInWithAppleButtonStyle(.white)
+        .frame(height: ComponentSize.buttonSize)
+        .cornerRadius(CornerRadius.md)
     }
 }
 

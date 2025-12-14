@@ -58,6 +58,7 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     func completeProfileSetup(userProfile: UserProfile) {
         UserDefaultsUtility.set(true, forKey: UserDefaultsKeys.profileComplete)
+        saveUserToStore(userProfile: userProfile)
         authState = .completed
     }
     

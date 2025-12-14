@@ -101,7 +101,7 @@ class BoopManager: ObservableObject {
         print("🤝 Boop: Processing queue - sending \(boopQueue.count) friend request(s)")
 
         while !boopQueue.isEmpty {
-            var deviceID = boopQueue.removeFirst()
+            let deviceID = boopQueue.removeFirst()
             // Check if device is connected
             guard let peripheral = bluetoothManager.connectedPeripherals[deviceID] else {
                 print("⚠️ Boop: Device \(deviceID.uuidString.prefix(8)) not connected, connecting...")

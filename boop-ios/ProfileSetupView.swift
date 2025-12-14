@@ -48,7 +48,7 @@ struct ProfileSetupView: View {
                 if let errorMessage = errorMessage {
                     Section {
                         Text(errorMessage)
-                            .foregroundColor(.red)
+                            .errorTextStyle()
                     }
                 }
 
@@ -65,7 +65,7 @@ struct ProfileSetupView: View {
             }
             .navigationTitle("Your Profile")
             .navigationBarTitleDisplayMode(.inline)
-        }
+        }.pageBackground()
     }
 
     private func saveProfile() {
