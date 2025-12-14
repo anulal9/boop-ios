@@ -22,43 +22,39 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        if let cachedUser = UserDefaults.standard.string(forKey: appleIDKey) {
-            self.userID = cachedUser
-            let isComplete = UserDefaults.standard.bool(forKey: profileCompleteKey)
-            authState = isComplete ? .completed : .profileSetup
+        Task {
+            // Safe to read UserDefaults now - directory is guaranteed to exist
+            if let cachedUser = await GetFromUserDefaultsString(key: appleIDKey) {
+                self.userID = cachedUser
+                let isComplete = await GetFromUserDefaultsBool(key: profileCompleteKey)
+                authState = isComplete ? .completed : .profileSetup
+            }
         }
     }
 
-    func signIn() {
-        authState = .authorizing
-        let request = ASAuthorizationAppleIDProvider().createRequest()
-        request.requestedScopes = [.fullName, .email]
-
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = self
-        controller.presentationContextProvider = self
-        controller.performRequests()
-    }
 
     func handleCompletion(_ result: Result<ASAuthorization, Error>) {
-        switch result {
-        case .success(let authorization):
-            switch authorization.credential {
-            case let credential as ASAuthorizationAppleIDCredential:
-                handleSuccess(credential: credential)
-            default:
-                handleFailure("Unsupported credential")
+        Task {
+            switch result {
+            case .success(let authorization):
+                switch authorization.credential {
+                case let credential as ASAuthorizationAppleIDCredential:
+                    handleSuccess(credential: credential)
+                default:
+                    handleFailure("Unsupported credential")
+                }
+            case .failure(let error):
+                handleFailure(error.localizedDescription)
             }
-        case .failure(let error):
-            handleFailure(error.localizedDescription)
         }
+    
     }
 
     private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
-        UserDefaults.standard.set(credential.user, forKey: appleIDKey)
+        UpdateUserDefaults(value: credential.user, key: appleIDKey)
         self.userID = credential.user
         if let firstName = credential.fullName?.givenName {
-            UserDefaults.standard.set(firstName, forKey: fullNameKey)
+            UpdateUserDefaults(value: firstName, key: fullNameKey)
         }
         authState = .profileSetup
     }
@@ -68,18 +64,40 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     func completeProfileSetup() {
-        UserDefaults.standard.set(true, forKey: profileCompleteKey)
+        UpdateUserDefaults(value: true, key: profileCompleteKey)
         authState = .completed
+    }
+    
+    private func GetFromUserDefaultsString(key: String) async -> String? {
+            UserDefaults.standard.string(forKey: key)
+    }
+    
+    private func GetFromUserDefaultsBool(key: String) async -> Bool {
+            UserDefaults.standard.bool(forKey: key)
+    }
+    
+    private func UpdateUserDefaults(value: Bool, key: String)
+    {
+        Task {
+            UserDefaults.standard.set(value, forKey: key)
+        }
+    }
+
+    private func UpdateUserDefaults(value: String, key: String)
+    {
+        Task {
+            UserDefaults.standard.set(value, forKey: key)
+        }
     }
 }
 
 extension AppleAuthViewModel: ASAuthorizationControllerDelegate {
     func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
         switch authorization.credential {
-        case let credential as ASAuthorizationAppleIDCredential:
-            handleSuccess(credential: credential)
-        default:
-            handleFailure("Unsupported credential")
+            case let credential as ASAuthorizationAppleIDCredential:
+                handleSuccess(credential: credential)
+            default:
+                handleFailure("Unsupported credential")
         }
     }
 
