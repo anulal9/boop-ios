@@ -10,32 +10,44 @@ import SwiftData
 
 @main
 struct boop_iosApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Entry.self,
-            UserProfile.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            // Ensure the Application Support directory exists before SwiftData tries to use it
-            let storeURL = modelConfiguration.url
-            let directory = storeURL.deletingLastPathComponent()
-            try? FileManager.default.createDirectory(at: directory,
-                                                    withIntermediateDirectories: true,
-                                                    attributes: nil)
-            
-            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
-            return container
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+    private var schema: Schema
+    private var modelConfiguration: ModelConfiguration
+    @State var sharedModelContainer: ModelContainer?
+    
+    init() {
+        self.schema = Schema([
+                Entry.self,
+                UserProfile.self,
+            ])
+        self.modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        let configurationUrl = self.modelConfiguration.url
+        Task {
+            await StorageCoordinator.shared.initialize(with: configurationUrl)
         }
-    }()
+    }
+    
+    @MainActor
+    private func setModelContainer() async {
+        do {
+            try await StorageCoordinator.shared.waitForInitialization()
+            sharedModelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        } catch {
+            fatalError("Unable to create model container \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            Group {
+                if let container = sharedModelContainer {
+                    RootView().modelContainer(container)
+                } else {
+                    Text("Jetskiing....")
+                }
+            }
+            .task {
+                await setModelContainer()
+            }
         }
-        .modelContainer(sharedModelContainer)
     }
 }
