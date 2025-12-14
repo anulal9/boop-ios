@@ -5,6 +5,7 @@ struct ProfileSetupView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var firstName = ""
     @State private var lastName = ""
+    @State private var userName = ""
     @State private var dateOfBirth = Date() // Default to 18 years ago
     @State private var errorMessage: String?
     @State private var isLoading = false
@@ -21,8 +22,9 @@ struct ProfileSetupView: View {
     }
 
     var canSubmit: Bool {
-        !firstName.trimmingCharacters(in: .whitespaces).isEmpty
-            && !lastName.trimmingCharacters(in: .whitespaces).isEmpty
+        !firstName.isEmptyAfterSanitizing
+            && !lastName.isEmptyAfterSanitizing
+                && !userName.isEmptyAfterSanitizing
     }
 
     var body: some View {
@@ -31,6 +33,8 @@ struct ProfileSetupView: View {
                 Section(header: Text("Profile Information")) {
                     TextField("First Name", text: $firstName)
                     TextField("Last Name", text: $lastName)
+                    TextField("User Name", text: $userName)
+                        .textInputAutocapitalization(TextInputAutocapitalization.never)
                 }
 
                 Section(header: Text("Date of Birth")) {
@@ -76,8 +80,9 @@ struct ProfileSetupView: View {
         if let userID = authViewModel.userID {
             let profile = UserProfile(
                 appleUserID: userID,
-                firstName: firstName.trimmingCharacters(in: .whitespaces),
-                lastName: lastName.trimmingCharacters(in: .whitespaces),
+                firstName: firstName.sanitize(),
+                lastName: lastName.sanitize(),
+                userName: userName.sanitize(),
                 dateOfBirth: dateOfBirth
             )
             modelContext.insert(profile)
