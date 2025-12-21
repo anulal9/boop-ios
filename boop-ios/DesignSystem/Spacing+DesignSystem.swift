@@ -8,6 +8,7 @@
 import Foundation
 
 enum Spacing {
+    static let none: CGFloat = 0
     /// Extra small spacing: 4pt
     static let xs: CGFloat = 4
 

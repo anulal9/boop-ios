@@ -89,3 +89,15 @@ enum LayoutConstant {
     /// Content spacing within card: 5pt
     static let cardContentGap: CGFloat = 5
 }
+
+// MARK: - Animation Durations
+enum AnimationDuration {
+    /// Quick animations (micro-interactions): 0.2s
+    static let quick: Double = 0.2
+
+    /// Standard animations (transitions): 0.3s
+    static let standard: Double = 0.3
+
+    /// Modal presentations and overlays: 1.0s
+    static let modal: Double = 1.0
+}

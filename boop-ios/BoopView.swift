@@ -18,30 +18,44 @@ struct BoopView: View {
     }
     
     var body: some View {
-        ZStack {
-            Text("Timeline").foregroundColor(Color.white).font(.title).fontWeight(.bold).fontDesign(.rounded)
-            Spacer()
-            List {
-                ForEach(entries) { entry in
-                    NavigationLink {
-                        Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
-                    } label: {
-                        Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationStack {
+            ScrollView {
+                Group {
+                    Text("Timeline")
+                        .primaryTextStyle()
+                }.frame(height: ComponentSize.pageHeaderHeight)
+                
+                Spacer()
+                
+                ZStack {
+                    LazyVStack {
+                        ForEach(entries) { entry in
+                            NavigationLink {
+                                Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
+                            } label: {
+                                Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                            }
+                        }
+                        .onDelete(perform: deleteEntry)
+                    }
+                    .scrollContentBackground(Visibility.hidden)
+                    
+                    if showBoop {
+                        Color.backgroundPrimary.opacity(0.4).ignoresSafeArea() // dim background
+                        VStack(spacing: Spacing.xl) {
+                            Text("Boop!")
+                                .heading1Style()
+                            Text(insertEntryAndGetUserText())
+                        }
+                        .cardStyle()
+                        .padding(Spacing.lg)
                     }
                 }
-                .onDelete(perform: deleteEntry)
-            }.background(Color.pink)
-            
-            if showBoop {
-                Color.black.opacity(0.4).ignoresSafeArea() // dim background
-                VStack(spacing: 20) {
-                    Text("Boop!").font(.title)
-                    Text(insertEntryAndGetUserText())
-                }.background(Color.pink)
+                .pageBackground()
+                .animation(.easeInOut(duration: AnimationDuration.modal), value: showBoop)
+                .onDisappear()
             }
         }
-        .animation(.easeInOut(duration: 10), value: showBoop)
-        .onDisappear()
     }
         
     private func deleteEntry(offsets: IndexSet) {
@@ -66,3 +80,34 @@ struct BoopView: View {
     }
 }
 
+#Preview("BoopPage") {
+    var entries = [
+        Entry(user: UUID())
+    ]
+    NavigationStack {
+        ScrollView {
+            Group {
+                Text("Timeline")
+                    .primaryTextStyle()
+            }
+            .frame(height: ComponentSize.pageHeaderHeight)
+            
+            LazyVStack {
+                ForEach(entries) { entry in
+                    NavigationLink {
+                        VStack {
+                            Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
+                                .heading2Style()
+                        }
+                    }
+                    label: {
+                        BoopInteractionCard(interaction: BoopInteraction(title: "Hang with Aparna", location: "John St, NY", date: "Dec 13th, 2025", time: "9pm", thumbnails: []))
+                    }
+                }
+            }
+        }
+        .pageBackground()
+    }
+//    .foregroundStyle(.primary)
+//    .background(RoundedRectangle(cornerRadius: CornerRadius.lg).opacity(1.0))
+}
