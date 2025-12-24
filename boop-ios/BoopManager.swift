@@ -82,6 +82,8 @@ class BoopManager: ObservableObject {
             success = true
             return deviceID
         }
+        
+        throw fatalError("Could not connect to device to boop")
     }
 
     /// Processes the boop queue by sending friend requests to all touching devices
