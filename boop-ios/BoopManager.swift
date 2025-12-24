@@ -1,4 +1,5 @@
 import Foundation
+import CoreBluetooth
 import Combine
 import UIKit
 
@@ -17,23 +18,21 @@ class BoopManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
-    private var displayName: String = ""
+    private lazy var displayName: Task<String, Error> = {
+        Task {
+            if let profile = await DataStore.shared.getUserProfile(),
+                 let name = profile.displayName {
+                return name
+            }
+            return ""
+        }
+    }()
 
     // MARK: - Init
     init(bluetoothManager: BluetoothManager) {
         self.bluetoothManager = bluetoothManager
         self.bluetoothManager.start()
         setupObservers()
-
-        // Fetch display name from DataStore
-        Task {
-            if let profile = await DataStore.shared.getUserProfile(),
-               let name = profile.displayName {
-                await MainActor.run {
-                    self.displayName = name
-                }
-            }
-        }
     }
     
     // MARK: - Setup
@@ -62,7 +61,7 @@ class BoopManager: ObservableObject {
         }
     }
     
-    func boopAndRemove() throws -> UUID {
+    func boopAndRemove() async throws -> UUID {
         guard !boopQueue.isEmpty else {
             print("🤝 Boop: Queue is empty, cannot boop + remove")
             return UUID()
@@ -79,59 +78,31 @@ class BoopManager: ObservableObject {
                 attempts += 1
                 continue
             }
-            
-            // Create connection request message
-            let message = BluetoothMessage(
-                senderUUID: deviceID,
-                messageType: .boop,
-                displayName: displayName
-            )
-            
-            // Send friend request
-            bluetoothManager.sendMessage(message, to: peripheral)
-            print("✉️ Boop: Booped \(deviceID.uuidString.prefix(8))")
-            success = true
-            return deviceID
+            success = await sendBluetoothMessage(peripheral: peripheral, deviceId: deviceID, messageType: .boop)
+            if (success) {
+                return deviceID
+            }
         }
         
         throw fatalError("Could not connect to device to boop")
     }
-
-    /// Processes the boop queue by sending friend requests to all touching devices
-    func processQueue() {
-        guard !boopQueue.isEmpty else {
-            print("🤝 Boop: Queue is empty, nothing to process")
-            return
-        }
-
-        guard let senderUUID = UIDevice.current.identifierForVendor else {
-            print("⚠️ Boop: Cannot get device identifier")
-            return
-        }
-
-        print("🤝 Boop: Processing queue - sending \(boopQueue.count) friend request(s)")
-
-        while !boopQueue.isEmpty {
-            let deviceID = boopQueue.removeFirst()
-            // Check if device is connected
-            guard let peripheral = bluetoothManager.connectedPeripherals[deviceID] else {
-                print("⚠️ Boop: Device \(deviceID.uuidString.prefix(8)) not connected, connecting...")
-                bluetoothManager.connect(to: deviceID)
-                // Note: Will need to retry sending after connection establishes
-                continue
-            }
-
+    
+    private func sendBluetoothMessage(peripheral: CBPeripheral, deviceId: UUID,
+                                      messageType: BluetoothMessage.MessageType) async -> Bool {
+        do {
             // Create connection request message
             let message = BluetoothMessage(
-                senderUUID: senderUUID,
-                messageType: .connectionRequest,
-                displayName: displayName
+                senderUUID: deviceId,
+                messageType: messageType,
+                displayName: try await self.displayName.value
             )
-
+            
             // Send friend request
             bluetoothManager.sendMessage(message, to: peripheral)
-
-            print("✉️ Boop: Sent friend request to \(deviceID.uuidString.prefix(8))")
+            return true
+        } catch {
+            print("\(error.localizedDescription) occured")
+            return false
         }
     }
 }

@@ -29,15 +29,15 @@ class BoopViewModel: NSObject, ObservableObject {
         boopManager.$boopQueue
             .sink { [weak self] boopQueue in
             guard let self = self else { return }
-                self.updateAnimationQueue(boopQueue: boopQueue)
+                Task { await self.updateAnimationQueue(boopQueue: boopQueue) }
         }
         .store(in: &cancellables)
     }
     
-    private func updateAnimationQueue(boopQueue: Set<UUID>) {
+    private func updateAnimationQueue(boopQueue: Set<UUID>) async {
         if !boopQueue.isEmpty {
             do {
-                let user = try boopManager.boopAndRemove()
+                let user = try await boopManager.boopAndRemove()
                 boopAnimationQueue.append(user)
                 
             } catch {
