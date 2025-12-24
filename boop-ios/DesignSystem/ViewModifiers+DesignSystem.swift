@@ -28,7 +28,7 @@ struct Heading1Style: ViewModifier {
         content
             .font(.heading1)
             .background(Color.clear)
-            .foregroundColor(.textPrimary)
+            .foregroundColor(.textMuted)
             .lineSpacing(for: .heading1)
     }
 }

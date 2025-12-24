@@ -23,6 +23,10 @@ struct BoopView: View {
                 Group {
                     Text("Timeline")
                         .primaryTextStyle()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    Text("This Week")
+                        .heading1Style()
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(height: ComponentSize.pageHeaderHeight)
                 
                 Spacer()
@@ -31,9 +35,9 @@ struct BoopView: View {
                     LazyVStack {
                         ForEach(entries) { entry in
                             NavigationLink {
-                                buildInteractionCard(entry: entry)
-                            } label: {
                                 Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                            } label: {
+                                buildInteractionCard(entry: entry)
                             }
                         }
                         .onDelete(perform: deleteEntry)
@@ -97,7 +101,7 @@ func buildInteractionCard(entry: Entry) -> BoopInteractionCard {
 
 #Preview("BoopPage") {
     let testEntries: [Entry] = [
-        Entry(displayName: "John Doe")
+        Entry(displayName: "Anuradha Lal")
     ]
     
     NavigationStack {
@@ -105,6 +109,10 @@ func buildInteractionCard(entry: Entry) -> BoopInteractionCard {
             Group {
                 Text("Timeline")
                     .primaryTextStyle()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                Text("This Week")
+                    .heading1Style()
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(height: ComponentSize.pageHeaderHeight)
             
@@ -124,6 +132,4 @@ func buildInteractionCard(entry: Entry) -> BoopInteractionCard {
         }
         .pageBackground()
     }
-//    .foregroundStyle(.primary)
-//    .background(RoundedRectangle(cornerRadius: CornerRadius.lg).opacity(1.0))
 }
