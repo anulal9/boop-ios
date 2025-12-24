@@ -26,6 +26,7 @@ struct BluetoothMessage {
 
     // MARK: - Encoding
     func encode() -> Data {
+        print("🔄 Encoding. SenderUUID: \(senderUUID), DisplayName: \(displayName)")
         var data = Data()
 
         // Add sender UUID (16 bytes)
@@ -37,6 +38,8 @@ struct BluetoothMessage {
         // Truncate display name to max bytes
         let truncatedDisplayName = Self.truncateDisplayName(displayName)
         let displayNameData = truncatedDisplayName.data(using: .utf8) ?? Data()
+        print("Truncated and converted display name. TruncatedDisplayName: \(truncatedDisplayName)")
+        print("Display name data: \(displayNameData)")
 
         // Add display name length (1 byte)
         data.append(UInt8(displayNameData.count))
@@ -78,6 +81,7 @@ struct BluetoothMessage {
 
         // Extract display name length (1 byte)
         let displayNameLength = Int(data[17])
+        print("Decoding. DisplayName lenth: \(displayNameLength)")
 
         // Validate display name length
         guard data.count >= 20 + displayNameLength else {
@@ -88,6 +92,7 @@ struct BluetoothMessage {
         // Extract display name
         let displayNameData = data.subdata(in: 18..<(18 + displayNameLength))
         let displayName = String(data: displayNameData, encoding: .utf8) ?? ""
+        print("Decoded display name: \(displayName)")
 
         // Extract payload length (2 bytes) - now offset by displayNameLength
         let payloadLengthOffset = 18 + displayNameLength

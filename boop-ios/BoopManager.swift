@@ -12,6 +12,7 @@ class BoopManager: ObservableObject {
     // MARK: - Published Properties
     /// Devices currently in touching range (≤10cm, angles aligned)
     @Published var boopQueue = Set<UUID>()
+    @Published var boopsToRender: [Boop] = []
 
     // MARK: - Private Properties
     private let bluetoothManager: BluetoothManager
@@ -29,8 +30,9 @@ class BoopManager: ObservableObject {
     }()
 
     // MARK: - Init
-    init(bluetoothManager: BluetoothManager) {
-        self.bluetoothManager = bluetoothManager
+    init() {
+        self.bluetoothManager = BluetoothManager(uwbManager: UWBManager())
+        self.bluetoothManager.setBoopDelegate(self)
         self.bluetoothManager.start()
         setupObservers()
     }
@@ -41,13 +43,13 @@ class BoopManager: ObservableObject {
         bluetoothManager.$nearbyDevices
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                self.updateBoopQueue()
+                self.updateToBoopQueue()
             }
             .store(in: &cancellables)
     }
 
     /// Updates the boop queue by filtering nearby devices for touching distance (sync version)
-    private func updateBoopQueue() {
+    private func updateToBoopQueue() {
         print("🔄 Boop: Checking for devices in touching range...")
         
         let touchingDevices = Set(
@@ -59,6 +61,13 @@ class BoopManager: ObservableObject {
         for device in devicesToAdd {
             boopQueue.insert(device)
         }
+    }
+    
+    func receiveBoopAndRemove() throws -> Boop {
+        if (!self.boopsToRender.isEmpty) {
+            return boopsToRender.popLast()!
+        }
+        throw fatalError("Attempted to render a non-existent boop")
     }
     
     func boopAndRemove() async throws -> UUID {
@@ -104,5 +113,10 @@ class BoopManager: ObservableObject {
             print("\(error.localizedDescription) occured")
             return false
         }
+    }
+}
+extension BoopManager: BoopDelegate {
+    func didReceiveBoop(from senderUUID: UUID, displayName: String) {
+        boopsToRender.append(Boop(senderUUID: senderUUID, displayName: displayName))
     }
 }

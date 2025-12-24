@@ -9,12 +9,12 @@ import SwiftUI
 import SwiftData
 
 struct BoopView: View {
-    @StateObject private var boopViewModel = BoopViewModel()
+    @StateObject private var boopManager = BoopManager()
     @Environment(\.modelContext) private var modelContext
     @Query private var entries: [Entry]
     
     var showBoop: Bool {
-        !boopViewModel.boopAnimationQueue.isEmpty
+        !boopManager.boopsToRender.isEmpty
     }
     
     var body: some View {
@@ -71,13 +71,16 @@ struct BoopView: View {
     }
     
     private func insertEntryAndGetUserText() -> String {
-        let displayName = boopViewModel.getBoopUserFromAnimationQueueAndRemove()
-        withAnimation {
-            if (displayName != "") {
-                modelContext.insert(Entry(displayName: displayName))
+        do {
+            let boop = try boopManager.receiveBoopAndRemove()
+            withAnimation {
+                modelContext.insert(Entry(displayName: boop.displayName))
             }
+            return boop.displayName
+        } catch {
+            print("Error attempting to receive boop")
+            return "User not found"
         }
-        return displayName
     }
 }
 

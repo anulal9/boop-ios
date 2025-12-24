@@ -107,11 +107,14 @@ actor DataStore {
     /// Returns all available user profile data
     /// Returns nil if no user is signed in (no Apple user ID)
     func getUserProfile() async -> UserProfileData? {
+        
+        print("Get UserProfile called")
         guard let appleUserID = await getAppleUserID() else {
+            print("No profile found")
             return nil
         }
 
-        return UserProfileData(
+        let userProfileData = UserProfileData(
             appleUserID: appleUserID,
             firstName: await getFirstName(),
             lastName: await getLastName(),
@@ -119,6 +122,8 @@ actor DataStore {
             birthDate: await getBirthDate(),
             isAdult: await isAdult()
         )
+        print("Constructed user profile data. Display Name: \(userProfileData.displayName ?? "no profile data found")")
+        return userProfileData
     }
 
     /// Saves user profile data to storage

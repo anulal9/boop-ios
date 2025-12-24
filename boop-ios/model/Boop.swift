@@ -9,4 +9,5 @@ import Foundation
 
 struct Boop {
     let senderUUID: UUID
+    let displayName: String
 }

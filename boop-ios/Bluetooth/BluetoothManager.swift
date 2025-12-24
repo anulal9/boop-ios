@@ -24,7 +24,7 @@ class BluetoothManager: NSObject, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Init
-    init(uwbManager: UWBManaging? = nil) {
+    init(uwbManager: UWBManaging? = nil, boopDelegate: BoopDelegate? = nil) {
         self.uwbManager = uwbManager
         super.init()
 
@@ -34,12 +34,18 @@ class BluetoothManager: NSObject, ObservableObject {
             uwbDiscoveryToken: uwbToken
         )
         service.delegate = self
-
+        if let boopDelegate = boopDelegate {
+            service.setBoopDelegate(boopDelegate: boopDelegate)
+        }
         // Set up observer for nearbyDevices changes to manage UWB ranging
         setupUWBObserver()
     }
 
     // MARK: - Public Methods
+    func setBoopDelegate(_ delegate: BoopDelegate) {
+        service.setBoopDelegate(boopDelegate: delegate)
+    }
+
     func start() {
         uwbManager?.setUpDelegate(uwbManagerDelegate: self)
         Task {
@@ -202,11 +208,6 @@ extension BluetoothManager: BluetoothServiceDelegate {
         connectedPeripherals.removeValue(forKey: deviceID)
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
         print("📊 BT Manager: State after disconnect - nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
-    }
-
-    func didReceiveBoop(from senderUUID: UUID) {
-        print("🤝 BT Manager: didReceiveBoop(\(senderUUID.uuidString.prefix(8)))")
-        boops[senderUUID] = Boop(senderUUID: senderUUID)
     }
 
     func didReceiveConnectionRequest(from senderUUID: UUID) {
