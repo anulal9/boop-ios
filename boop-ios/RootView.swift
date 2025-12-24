@@ -38,14 +38,19 @@ struct RootView: View {
     }
 
     private var signInButton: some View {
-        SignInWithAppleButton(.signIn) { request in
-            request.requestedScopes = [.fullName, .email]
-        } onCompletion: { result in
-            authViewModel.handleCompletion(result)
+        Button(action: {
+            authViewModel.signInWithApple()
+        }) {
+            HStack {
+                Image(systemName: "applelogo")
+                Text("Sign in with Apple")
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: ComponentSize.buttonSize)
+            .foregroundColor(.white)
+            .background(Color.black)
+            .cornerRadius(CornerRadius.md)
         }
-        .signInWithAppleButtonStyle(.white)
-        .frame(height: ComponentSize.buttonSize)
-        .cornerRadius(CornerRadius.md)
     }
 }
 
