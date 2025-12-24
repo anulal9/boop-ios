@@ -8,7 +8,6 @@ import NearbyInteraction
 class BluetoothManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published var nearbyDevices: [UUID: DevicePositionCategory] = [:]
-    @Published var boops: [UUID: Boop] = [:]
     @Published var connectionRequests: [UUID: ConnectionRequest] = [:]
     @Published var connectionResponses: [UUID: ConnectionResponse] = [:]
 

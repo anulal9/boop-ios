@@ -85,21 +85,14 @@ struct BoopView: View {
 }
 
 func buildInteractionCard(entry: Entry) -> BoopInteractionCard {
-    let dateFormatter = RelativeDateTimeFormatter()
-    dateFormatter.dateTimeStyle = RelativeDateTimeFormatter.DateTimeStyle.named
-    dateFormatter.unitsStyle = .abbreviated
-    
     let interaction = BoopInteraction(
         title: entry.displayName,
         location: "temp - todo",
-        date: dateFormatter.localizedString(
-            for: entry.timestamp,
-            relativeTo: Date.now),
+        timestamp: entry.timestamp,
         thumbnails: []
-        )
-    
-    let card = BoopInteractionCard.init(interaction: interaction)
-    return card
+    )
+
+    return BoopInteractionCard(interaction: interaction)
 }
 
 #Preview("BoopPage") {

@@ -7,7 +7,7 @@ import UIKit
 /// Manages the queue of devices that are in "boop" range (touching distance)
 /// Automatically tracks devices that are ≤10cm away with aligned angles
 @MainActor
-class BoopManager: ObservableObject {
+class BoopManager: NSObject, ObservableObject {
 
     // MARK: - Published Properties
     /// Devices currently in touching range (≤10cm, angles aligned)
@@ -30,8 +30,9 @@ class BoopManager: ObservableObject {
     }()
 
     // MARK: - Init
-    init() {
+    override init() {
         self.bluetoothManager = BluetoothManager(uwbManager: UWBManager())
+        super.init()
         self.bluetoothManager.setBoopDelegate(self)
         self.bluetoothManager.start()
         setupObservers()
@@ -43,23 +44,32 @@ class BoopManager: ObservableObject {
         bluetoothManager.$nearbyDevices
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                self.updateToBoopQueue()
+                self.boopTouchingDevices()
             }
             .store(in: &cancellables)
     }
 
     /// Updates the boop queue by filtering nearby devices for touching distance (sync version)
-    private func updateToBoopQueue() {
+    private func boopTouchingDevices() {
         print("🔄 Boop: Checking for devices in touching range...")
         
         let touchingDevices = Set(
             bluetoothManager.nearbyDevices.filter
             { key, value in value == DevicePositionCategory.ApproxTouching }.keys)
-        
-        let devicesToAdd = touchingDevices.subtracting(boopQueue)
     
-        for device in devicesToAdd {
-            boopQueue.insert(device)
+        Task {
+            let devicesToAdd = touchingDevices.subtracting(boopQueue)
+            for device in devicesToAdd {
+                print("🔄 Boop: Adding device \(device) to boopQueue")
+                do {
+                    let didBoop = try await boopDevice(deviceId: device)
+                    if (!didBoop) {
+                        print("🔄 Boop: failed boop after 3 retries for device \(device)")
+                    }
+                } catch {
+                    print("🔄 Boop: received error while booping device \(device)")
+                }
+            }
         }
     }
     
@@ -67,46 +77,39 @@ class BoopManager: ObservableObject {
         if (!self.boopsToRender.isEmpty) {
             return boopsToRender.popLast()!
         }
+        
         throw fatalError("Attempted to render a non-existent boop")
     }
     
-    func boopAndRemove() async throws -> UUID {
-        guard !boopQueue.isEmpty else {
-            print("🤝 Boop: Queue is empty, cannot boop + remove")
-            return UUID()
-        }
-        let deviceID = boopQueue.removeFirst()
+    private func boopDevice(deviceId: UUID) async throws -> Bool {
         // Check if device is connected
         var success = false
         var attempts = 0
         while (!success && attempts < 3) {
-            guard let peripheral = bluetoothManager.connectedPeripherals[deviceID] else {
-                print("⚠️ Boop: Device \(deviceID.uuidString.prefix(8)) not connected, connecting...")
-                bluetoothManager.connect(to: deviceID)
+            guard let peripheral = bluetoothManager.connectedPeripherals[deviceId] else {
+                print("⚠️ Boop: Device \(deviceId.uuidString.prefix(8)) not connected, connecting...")
+                bluetoothManager.connect(to: deviceId)
                 // Note: Will need to retry sending after connection establishes
                 attempts += 1
                 continue
             }
-            success = await sendBluetoothMessage(peripheral: peripheral, deviceId: deviceID, messageType: .boop)
+            success = await sendBluetoothMessage(peripheral: peripheral, deviceId: deviceId, messageType: .boop)
             if (success) {
-                return deviceID
+                return true
             }
         }
-        
-        throw fatalError("Could not connect to device to boop")
+        return false
     }
     
     private func sendBluetoothMessage(peripheral: CBPeripheral, deviceId: UUID,
                                       messageType: BluetoothMessage.MessageType) async -> Bool {
         do {
-            // Create connection request message
             let message = BluetoothMessage(
                 senderUUID: deviceId,
                 messageType: messageType,
                 displayName: try await self.displayName.value
             )
-            
-            // Send friend request
+            print("Boop: Sending BLE Message")
             bluetoothManager.sendMessage(message, to: peripheral)
             return true
         } catch {
@@ -117,6 +120,7 @@ class BoopManager: ObservableObject {
 }
 extension BoopManager: BoopDelegate {
     func didReceiveBoop(from senderUUID: UUID, displayName: String) {
+        print("Boop: Received boop from \(displayName)")
         boopsToRender.append(Boop(senderUUID: senderUUID, displayName: displayName))
     }
 }
