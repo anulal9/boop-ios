@@ -1,4 +1,5 @@
 import Foundation
+import CoreBluetooth
 import Combine
 import UIKit
 
@@ -6,21 +7,33 @@ import UIKit
 /// Manages the queue of devices that are in "boop" range (touching distance)
 /// Automatically tracks devices that are ≤10cm away with aligned angles
 @MainActor
-class BoopManager: ObservableObject {
+class BoopManager: NSObject, ObservableObject {
 
     // MARK: - Published Properties
     /// Devices currently in touching range (≤10cm, angles aligned)
     @Published var boopQueue = Set<UUID>()
+    @Published var boopsToRender: [Boop] = []
 
     // MARK: - Private Properties
     private let bluetoothManager: BluetoothManager
     private var cancellables = Set<AnyCancellable>()
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
+    private lazy var displayName: Task<String, Error> = {
+        Task {
+            if let profile = await DataStore.shared.getUserProfile(),
+                 let name = profile.displayName {
+                return name
+            }
+            return ""
+        }
+    }()
 
     // MARK: - Init
-    init(bluetoothManager: BluetoothManager) {
-        self.bluetoothManager = bluetoothManager
+    override init() {
+        self.bluetoothManager = BluetoothManager(uwbManager: UWBManager())
+        super.init()
+        self.bluetoothManager.setBoopDelegate(self)
         self.bluetoothManager.start()
         setupObservers()
     }
@@ -31,96 +44,83 @@ class BoopManager: ObservableObject {
         bluetoothManager.$nearbyDevices
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                self.updateBoopQueue()
+                self.boopTouchingDevices()
             }
             .store(in: &cancellables)
     }
 
     /// Updates the boop queue by filtering nearby devices for touching distance (sync version)
-    private func updateBoopQueue() {
+    private func boopTouchingDevices() {
         print("🔄 Boop: Checking for devices in touching range...")
         
         let touchingDevices = Set(
             bluetoothManager.nearbyDevices.filter
             { key, value in value == DevicePositionCategory.ApproxTouching }.keys)
-        
-        let devicesToAdd = touchingDevices.subtracting(boopQueue)
     
-        for device in devicesToAdd {
-            boopQueue.insert(device)
+        Task {
+            let devicesToAdd = touchingDevices.subtracting(boopQueue)
+            for device in devicesToAdd {
+                print("🔄 Boop: Adding device \(device) to boopQueue")
+                do {
+                    let didBoop = try await boopDevice(deviceId: device)
+                    if (!didBoop) {
+                        print("🔄 Boop: failed boop after 3 retries for device \(device)")
+                    }
+                } catch {
+                    print("🔄 Boop: received error while booping device \(device)")
+                }
+            }
         }
     }
     
-    func boopAndRemove() throws -> UUID {
-        guard !boopQueue.isEmpty else {
-            print("🤝 Boop: Queue is empty, cannot boop + remove")
-            return UUID()
+    func receiveBoopAndRemove() throws -> Boop {
+        if (!self.boopsToRender.isEmpty) {
+            return boopsToRender.popLast()!
         }
-        let deviceID = boopQueue.removeFirst()
+        
+        throw fatalError("Attempted to render a non-existent boop")
+    }
+    
+    private func boopDevice(deviceId: UUID) async throws -> Bool {
         // Check if device is connected
         var success = false
         var attempts = 0
         while (!success && attempts < 3) {
-            guard let peripheral = bluetoothManager.connectedPeripherals[deviceID] else {
-                print("⚠️ Boop: Device \(deviceID.uuidString.prefix(8)) not connected, connecting...")
-                bluetoothManager.connect(to: deviceID)
+            guard let peripheral = bluetoothManager.connectedPeripherals[deviceId] else {
+                print("⚠️ Boop: Device \(deviceId.uuidString.prefix(8)) not connected, connecting...")
+                bluetoothManager.connect(to: deviceId)
                 // Note: Will need to retry sending after connection establishes
                 attempts += 1
                 continue
             }
-            
-            // Create connection request message
-            let message = BluetoothMessage(
-                senderUUID: deviceID,
-                messageType: .boop,
-                payload: Data()
-            )
-            
-            // Send friend request
-            bluetoothManager.sendMessage(message, to: peripheral)
-            print("✉️ Boop: Booped \(deviceID.uuidString.prefix(8))")
-            success = true
-            return deviceID
-        }
-        
-        throw fatalError("Could not connect to device to boop")
-    }
-
-    /// Processes the boop queue by sending friend requests to all touching devices
-    func processQueue() {
-        guard !boopQueue.isEmpty else {
-            print("🤝 Boop: Queue is empty, nothing to process")
-            return
-        }
-
-        guard let senderUUID = UIDevice.current.identifierForVendor else {
-            print("⚠️ Boop: Cannot get device identifier")
-            return
-        }
-
-        print("🤝 Boop: Processing queue - sending \(boopQueue.count) friend request(s)")
-
-        while !boopQueue.isEmpty {
-            let deviceID = boopQueue.removeFirst()
-            // Check if device is connected
-            guard let peripheral = bluetoothManager.connectedPeripherals[deviceID] else {
-                print("⚠️ Boop: Device \(deviceID.uuidString.prefix(8)) not connected, connecting...")
-                bluetoothManager.connect(to: deviceID)
-                // Note: Will need to retry sending after connection establishes
-                continue
+            success = await sendBluetoothMessage(peripheral: peripheral, deviceId: deviceId, messageType: .boop)
+            if (success) {
+                return true
             }
-
-            // Create connection request message
-            let message = BluetoothMessage(
-                senderUUID: senderUUID,
-                messageType: .connectionRequest,
-                payload: Data()
-            )
-
-            // Send friend request
-            bluetoothManager.sendMessage(message, to: peripheral)
-
-            print("✉️ Boop: Sent friend request to \(deviceID.uuidString.prefix(8))")
         }
+        return false
+    }
+    
+    private func sendBluetoothMessage(peripheral: CBPeripheral, deviceId: UUID,
+                                      messageType: BluetoothMessage.MessageType) async -> Bool {
+        do {
+            let message = BluetoothMessage(
+                senderUUID: deviceId,
+                messageType: messageType,
+                displayName: try await self.displayName.value
+            )
+            print("Boop: Sending BLE Message")
+            bluetoothManager.sendMessage(message, to: peripheral)
+            return true
+        } catch {
+            print("\(error.localizedDescription) occured")
+            return false
+        }
+    }
+}
+extension BoopManager: BoopDelegate {
+    func didReceiveBoop(from senderUUID: UUID, displayName: String) {
+        print("Boop: Received boop from \(displayName)")
+        boopsToRender.append(Boop(senderUUID: senderUUID, displayName: displayName))
     }
 }

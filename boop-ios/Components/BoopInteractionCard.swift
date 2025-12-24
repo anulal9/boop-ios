@@ -29,10 +29,13 @@ struct BoopInteractionCard: View {
                         .truncationMode(.tail)
 
                     // Subtitle: location • date • time
-                    HStack(spacing: 0) {
-                        subtitleText(interaction.location)
-                        bullet
-                        subtitleText(interaction.date)
+                    // TimelineView updates automatically as time passes
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        HStack(spacing: 0) {
+                            subtitleText(interaction.location)
+                            bullet
+                            subtitleText(relativeTimeString(for: interaction.timestamp))
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -165,6 +168,15 @@ struct BoopInteractionCard: View {
             .font(.subtitle)
             .foregroundColor(.textMuted)
     }
+
+    // MARK: - Helper Functions
+
+    private func relativeTimeString(for date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.dateTimeStyle = .named
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date.now)
+    }
 }
 
 // MARK: - Preview
@@ -175,7 +187,7 @@ struct BoopInteractionCard: View {
             interaction: BoopInteraction(
                 title: "Hang with Aparna",
                 location: "Stuytown, NYC",
-                date: "Yesterday",
+                timestamp: Date().addingTimeInterval(-86400), // 1 day ago
                 thumbnails: [UIImage()]
             )
         )
@@ -190,7 +202,7 @@ struct BoopInteractionCard: View {
             interaction: BoopInteraction(
                 title: "Anish, Sarem...",
                 location: "John St, NYC",
-                date: "Last Wed",
+                timestamp: Date().addingTimeInterval(-604800), // 1 week ago
                 thumbnails: [UIImage(), UIImage()]
             )
         )
@@ -205,7 +217,7 @@ struct BoopInteractionCard: View {
             interaction: BoopInteraction(
                 title: "Anu, Jesse, Sarem",
                 location: "Joyface, NYC",
-                date: "Last Year",
+                timestamp: Date().addingTimeInterval(-31536000), // 1 year ago
                 thumbnails: [UIImage(), UIImage(), UIImage()]
             )
         )
@@ -221,7 +233,7 @@ struct BoopInteractionCard: View {
                 interaction: BoopInteraction(
                     title: BoopInteraction.samples[index].title,
                     location: BoopInteraction.samples[index].location,
-                    date: BoopInteraction.samples[index].date,
+                    timestamp: BoopInteraction.samples[index].timestamp,
                     thumbnails: Array(repeating: UIImage(), count: index + 1)
                 )
             )

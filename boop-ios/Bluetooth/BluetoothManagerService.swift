@@ -14,12 +14,16 @@ protocol BluetoothServiceDelegate: AnyObject {
     func didRemoveDevice(_ deviceID: UUID)
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral)
     func didDisconnect(from deviceID: UUID)
-    func didReceiveBoop(from senderUUID: UUID)
     func didReceiveConnectionRequest(from senderUUID: UUID)
     func didReceiveConnectionAccept(from senderUUID: UUID)
     func didReceiveConnectionReject(from senderUUID: UUID)
     func didReceiveDisconnect(from senderUUID: UUID)
     func didExchangeUWBToken(for deviceID: UUID, token: NIDiscoveryToken)
+}
+
+@MainActor
+protocol BoopDelegate: AnyObject {
+    func didReceiveBoop(from senderUUID: UUID, displayName: String)
 }
 
 // MARK: - Service Protocol
@@ -38,6 +42,7 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
     private var centralManager: CBCentralManager!
     private var peripheralManager: CBPeripheralManager!
     weak var delegate: BluetoothServiceDelegate?
+    weak var boopDelegate: BoopDelegate?
 
     // MARK: - BLE UUIDs
     private let boopServiceUUID = CBUUID(string: "D3A42A7C-DA0E-4D2C-AAB1-88C77E018A5F")
@@ -83,6 +88,10 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         discoveredDevices = [:]
         hasStarted = false
         print("🛑 Stopped advertising and scanning")
+    }
+    
+    func setBoopDelegate(boopDelegate: BoopDelegate) {
+        self.boopDelegate = boopDelegate
     }
 
     func connect(to deviceID: UUID) async {
@@ -246,8 +255,8 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
             Task { @MainActor in
                 switch message.messageType {
                 case .boop:
-                    self.delegate?
-                        .didReceiveBoop(from: message.senderUUID)
+                    self.boopDelegate?
+                        .didReceiveBoop(from: message.senderUUID, displayName: message.displayName)
                 case .connectionRequest:
                     self.delegate?.didReceiveConnectionRequest(from: message.senderUUID)
                 case .connectionAccept:
