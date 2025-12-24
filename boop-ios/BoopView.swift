@@ -31,7 +31,7 @@ struct BoopView: View {
                     LazyVStack {
                         ForEach(entries) { entry in
                             NavigationLink {
-                                Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
+                                buildInteractionCard(entry: entry)
                             } label: {
                                 Text(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
                             }
@@ -67,23 +67,39 @@ struct BoopView: View {
     }
     
     private func insertEntryAndGetUserText() -> String {
-        let userString = boopViewModel.getBoopUserFromAnimationQueueAndRemove()
+        let displayName = boopViewModel.getBoopUserFromAnimationQueueAndRemove()
         withAnimation {
-            if (userString != "") {
-                let user = UUID(uuidString: userString)
-                if let nonnulluser = user {
-                    modelContext.insert(Entry(user: nonnulluser))
-                }
+            if (displayName != "") {
+                modelContext.insert(Entry(displayName: displayName))
             }
         }
-        return userString
+        return displayName
     }
 }
 
+func buildInteractionCard(entry: Entry) -> BoopInteractionCard {
+    let dateFormatter = RelativeDateTimeFormatter()
+    dateFormatter.dateTimeStyle = RelativeDateTimeFormatter.DateTimeStyle.named
+    dateFormatter.unitsStyle = .abbreviated
+    
+    let interaction = BoopInteraction(
+        title: entry.displayName,
+        location: "temp - todo",
+        date: dateFormatter.localizedString(
+            for: entry.timestamp,
+            relativeTo: Date.now),
+        thumbnails: []
+        )
+    
+    let card = BoopInteractionCard.init(interaction: interaction)
+    return card
+}
+
 #Preview("BoopPage") {
-    var entries = [
-        Entry(user: UUID())
+    let testEntries: [Entry] = [
+        Entry(displayName: "John Doe")
     ]
+    
     NavigationStack {
         ScrollView {
             Group {
@@ -93,15 +109,15 @@ struct BoopView: View {
             .frame(height: ComponentSize.pageHeaderHeight)
             
             LazyVStack {
-                ForEach(entries) { entry in
+                ForEach(testEntries) { entry in
                     NavigationLink {
                         VStack {
-                            Text("Boop at \(entry.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard)) from \(entry.user)")
+                            Text("Boop at \(entry.timestamp) from \(entry.displayName)")
                                 .heading2Style()
                         }
                     }
                     label: {
-                        BoopInteractionCard(interaction: BoopInteraction(title: "Hang with Aparna", location: "John St, NY", date: "Dec 13th, 2025", time: "9pm", thumbnails: []))
+                        buildInteractionCard(entry: entry)
                     }
                 }
             }

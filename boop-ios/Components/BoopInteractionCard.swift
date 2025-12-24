@@ -33,8 +33,6 @@ struct BoopInteractionCard: View {
                         subtitleText(interaction.location)
                         bullet
                         subtitleText(interaction.date)
-                        bullet
-                        subtitleText(interaction.time)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -178,7 +176,6 @@ struct BoopInteractionCard: View {
                 title: "Hang with Aparna",
                 location: "Stuytown, NYC",
                 date: "Yesterday",
-                time: "3pm",
                 thumbnails: [UIImage()]
             )
         )
@@ -194,7 +191,6 @@ struct BoopInteractionCard: View {
                 title: "Anish, Sarem...",
                 location: "John St, NYC",
                 date: "Last Wed",
-                time: "6pm",
                 thumbnails: [UIImage(), UIImage()]
             )
         )
@@ -210,7 +206,6 @@ struct BoopInteractionCard: View {
                 title: "Anu, Jesse, Sarem",
                 location: "Joyface, NYC",
                 date: "Last Year",
-                time: "11pm",
                 thumbnails: [UIImage(), UIImage(), UIImage()]
             )
         )
@@ -227,7 +222,6 @@ struct BoopInteractionCard: View {
                     title: BoopInteraction.samples[index].title,
                     location: BoopInteraction.samples[index].location,
                     date: BoopInteraction.samples[index].date,
-                    time: BoopInteraction.samples[index].time,
                     thumbnails: Array(repeating: UIImage(), count: index + 1)
                 )
             )

@@ -23,6 +23,7 @@ struct boop_iosApp: App {
         let configurationUrl = self.modelConfiguration.url
         Task {
             await StorageCoordinator.shared.initialize(with: configurationUrl)
+            await DataStore.shared.warmup()
         }
     }
     
