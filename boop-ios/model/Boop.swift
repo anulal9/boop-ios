@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Boop {
+struct Boop: Equatable {
     let senderUUID: UUID
     let displayName: String
 }
