@@ -62,7 +62,6 @@ struct BoopInteractionListView: View {
                                     title: interaction.title,
                                     location: interaction.location,
                                     date: interaction.date,
-                                    time: interaction.time,
                                     thumbnails: Array(repeating: UIImage(), count: index + 1)
                                 ),
                                 onTap: {

@@ -13,7 +13,6 @@ struct BoopInteraction: Identifiable {
     let title: String
     let location: String
     let date: String
-    let time: String
     let thumbnails: [UIImage]
 
     var thumbnailCount: Int {
@@ -26,21 +25,18 @@ struct BoopInteraction: Identifiable {
             title: "Hang with Aparna",
             location: "Stuytown, NYC",
             date: "Yesterday",
-            time: "3pm",
             thumbnails: []
         ),
         BoopInteraction(
             title: "Anish, Sarem...",
             location: "John St, NYC",
             date: "Last Wed",
-            time: "6pm",
             thumbnails: []
         ),
         BoopInteraction(
             title: "Anu, Jesse, Sarem",
             location: "Joyface, NYC",
             date: "Last Year",
-            time: "11pm",
             thumbnails: []
         )
     ]

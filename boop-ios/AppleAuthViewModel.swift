@@ -19,10 +19,10 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     override init() {
         super.init()
         Task {
-            // Safe to read UserDefaults now - directory is guaranteed to exist
-            if let cachedUser = await UserDefaultsUtility.getString(forKey: UserDefaultsKeys.appleUserID) {
+            // Read from DataStore (cache is warmed up by this point)
+            if let cachedUser = await DataStore.shared.getAppleUserID() {
                 self.userID = cachedUser
-                let isComplete = await UserDefaultsUtility.getBool(forKey: UserDefaultsKeys.profileComplete)
+                let isComplete = await DataStore.shared.isProfileComplete()
                 authState = isComplete ? .completed : .profileSetup
             }
         }
@@ -47,7 +47,9 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     private func handleSuccess(credential: ASAuthorizationAppleIDCredential) {
-        UserDefaultsUtility.set(credential.user, forKey: UserDefaultsKeys.appleUserID)
+        Task {
+            await DataStore.shared.setAppleUserID(credential.user)
+        }
         self.userID = credential.user
         authState = .profileSetup
     }
@@ -57,20 +59,11 @@ final class AppleAuthViewModel: NSObject, ObservableObject {
     }
 
     func completeProfileSetup(userProfile: UserProfile) {
-        UserDefaultsUtility.set(true, forKey: UserDefaultsKeys.profileComplete)
-        saveUserToStore(userProfile: userProfile)
-        authState = .completed
-    }
-    
-    private func saveUserToStore(userProfile: UserProfile) {
         Task {
-            await UserDefaultsUtility.setAsync(userProfile.firstName, forKey: UserDefaultsKeys.firstName)
-            await UserDefaultsUtility.setAsync(userProfile.lastName, forKey: UserDefaultsKeys.lastName)
-            await UserDefaultsUtility.setAsync(userProfile.displayName, forKey: UserDefaultsKeys.userName)
-            await UserDefaultsUtility.setAsync(userProfile.dateOfBirth, forKey: UserDefaultsKeys.birthDate)
-            await UserDefaultsUtility.setAsync(userProfile.isAdult, forKey: UserDefaultsKeys.isAdult)
+            await DataStore.shared.setUserProfile(userProfile)
+            await DataStore.shared.setProfileComplete(true)
         }
-
+        authState = .completed
     }
 }
 

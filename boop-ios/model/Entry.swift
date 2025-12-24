@@ -10,11 +10,11 @@ import SwiftData
 
 @Model
 final class Entry {
-    var user: UUID
-    var timestamp: Date
+    private(set) var displayName: String
+    private(set) var timestamp: Date
     
-    init(user: UUID) {
-        self.user = user
+    init(displayName: String) {
+        self.displayName = displayName
         self.timestamp = Date()
     }
 }
