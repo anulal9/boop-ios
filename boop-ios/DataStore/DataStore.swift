@@ -18,6 +18,9 @@ actor DataStore {
     func warmup() async {
         guard !isWarmedUp else { return }
 
+        // Wait for storage initialization to complete before accessing UserDefaults
+        try? await StorageCoordinator.shared.waitForInitialization()
+
         // Pre-load user profile data into cache
         if let appleUserID = UserDefaults.standard.string(forKey: UserDefaultsKeys.appleUserID) {
             cache[UserDefaultsKeys.appleUserID] = appleUserID
