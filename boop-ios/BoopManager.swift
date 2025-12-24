@@ -17,12 +17,23 @@ class BoopManager: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
+    private var displayName: String = ""
 
     // MARK: - Init
     init(bluetoothManager: BluetoothManager) {
         self.bluetoothManager = bluetoothManager
         self.bluetoothManager.start()
         setupObservers()
+
+        // Fetch display name from DataStore
+        Task {
+            if let profile = await DataStore.shared.getUserProfile(),
+               let name = profile.displayName {
+                await MainActor.run {
+                    self.displayName = name
+                }
+            }
+        }
     }
     
     // MARK: - Setup
@@ -73,7 +84,7 @@ class BoopManager: ObservableObject {
             let message = BluetoothMessage(
                 senderUUID: deviceID,
                 messageType: .boop,
-                payload: Data()
+                displayName: displayName
             )
             
             // Send friend request
@@ -114,7 +125,7 @@ class BoopManager: ObservableObject {
             let message = BluetoothMessage(
                 senderUUID: senderUUID,
                 messageType: .connectionRequest,
-                payload: Data()
+                displayName: displayName
             )
 
             // Send friend request

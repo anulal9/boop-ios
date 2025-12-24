@@ -6,11 +6,15 @@
 import Foundation
 
 /// Binary protocol for Bluetooth communication
-/// Format: [UUID: 16 bytes][MessageType: 1 byte][PayloadLength: 2 bytes][Payload: variable]
+/// Format: [UUID: 16 bytes][MessageType: 1 byte][DisplayNameLength: 1 byte][DisplayName: variable][PayloadLength: 2 bytes][Payload: variable]
 struct BluetoothMessage {
     let senderUUID: UUID
     let messageType: MessageType
+    let displayName: String
     let payload: Data
+
+    /// Maximum allowed length for display name in bytes (UTF-8 encoded)
+    static let maxDisplayNameBytes = 50
 
     enum MessageType: UInt8 {
         case connectionRequest = 0x01
@@ -30,6 +34,16 @@ struct BluetoothMessage {
         // Add message type (1 byte)
         data.append(messageType.rawValue)
 
+        // Truncate display name to max bytes
+        let truncatedDisplayName = Self.truncateDisplayName(displayName)
+        let displayNameData = truncatedDisplayName.data(using: .utf8) ?? Data()
+
+        // Add display name length (1 byte)
+        data.append(UInt8(displayNameData.count))
+
+        // Add display name
+        data.append(displayNameData)
+
         // Add payload length (2 bytes, big-endian)
         let payloadLength = UInt16(payload.count)
         data.append(UInt8(payloadLength >> 8))
@@ -43,8 +57,8 @@ struct BluetoothMessage {
 
     // MARK: - Decoding
     static func decode(_ data: Data) -> BluetoothMessage? {
-        // Minimum size: 16 (UUID) + 1 (type) + 2 (length) = 19 bytes
-        guard data.count >= 19 else {
+        // Minimum size: 16 (UUID) + 1 (type) + 1 (displayNameLength) + 2 (payloadLength) = 20 bytes
+        guard data.count >= 20 else {
             print("⚠️ BluetoothMessage decode failed: data too short (\(data.count) bytes)")
             return nil
         }
@@ -62,30 +76,70 @@ struct BluetoothMessage {
             return nil
         }
 
-        // Extract payload length (2 bytes)
-        let payloadLength = Int(data[17]) << 8 | Int(data[18])
+        // Extract display name length (1 byte)
+        let displayNameLength = Int(data[17])
+
+        // Validate display name length
+        guard data.count >= 20 + displayNameLength else {
+            print("⚠️ BluetoothMessage decode failed: display name length mismatch")
+            return nil
+        }
+
+        // Extract display name
+        let displayNameData = data.subdata(in: 18..<(18 + displayNameLength))
+        let displayName = String(data: displayNameData, encoding: .utf8) ?? ""
+
+        // Extract payload length (2 bytes) - now offset by displayNameLength
+        let payloadLengthOffset = 18 + displayNameLength
+        let payloadLength = Int(data[payloadLengthOffset]) << 8 | Int(data[payloadLengthOffset + 1])
 
         // Validate payload length
-        guard data.count >= 19 + payloadLength else {
+        guard data.count >= payloadLengthOffset + 2 + payloadLength else {
             print("⚠️ BluetoothMessage decode failed: payload length mismatch")
             return nil
         }
 
         // Extract payload
-        let payload = data.subdata(in: 19..<(19 + payloadLength))
+        let payloadOffset = payloadLengthOffset + 2
+        let payload = data.subdata(in: payloadOffset..<(payloadOffset + payloadLength))
 
         return BluetoothMessage(
             senderUUID: uuid,
             messageType: messageType,
+            displayName: displayName,
             payload: payload
         )
     }
 
     // MARK: - Convenience Initializers
-    init(senderUUID: UUID, messageType: MessageType, payload: Data) {
+    init(senderUUID: UUID, messageType: MessageType, displayName: String = "", payload: Data = Data()) {
         self.senderUUID = senderUUID
         self.messageType = messageType
+        self.displayName = displayName
         self.payload = payload
+    }
+
+    // MARK: - Helper Methods
+    /// Truncates a display name to fit within the maximum byte limit
+    /// Ensures we don't cut in the middle of a multi-byte UTF-8 character
+    private static func truncateDisplayName(_ name: String) -> String {
+        guard let data = name.data(using: .utf8), data.count > maxDisplayNameBytes else {
+            return name
+        }
+
+        // Truncate to max bytes
+        let truncatedData = data.prefix(maxDisplayNameBytes)
+
+        // Try to decode - if it fails, we may have cut a multi-byte character
+        // Keep removing bytes until we get a valid string
+        for length in stride(from: truncatedData.count, through: 0, by: -1) {
+            if let validString = String(data: truncatedData.prefix(length), encoding: .utf8) {
+                return validString
+            }
+        }
+
+        // Fallback to empty string if we can't decode anything
+        return ""
     }
 }
 
