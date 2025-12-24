@@ -122,11 +122,6 @@ class BluetoothManager: NSObject, ObservableObject {
 
     // MARK: - Async UWB Methods
 
-    /// Async version: Checks if the device is pointing at another device using UWB
-    func isPointingAtAsync(deviceID: UUID) async -> Bool {
-        return uwbManager?.isPointingAt(deviceID: deviceID) ?? false
-    }
-
     /// Async version: Checks if a device is nearby using UWB distance only
     func isNearbyAsync(deviceID: UUID) async -> Bool {
         return uwbManager?.isNearby(deviceID: deviceID) ?? false

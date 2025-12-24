@@ -1,28 +1,19 @@
 import Foundation
 import NearbyInteraction
-import simd
 
 // MARK: - Protocol for Dependency Injection
 protocol UWBManaging: AnyObject {
-    /// Determines if the device is pointed at another device using UWB
-    /// Combines angle alignment, height similarity, and proximity detection
-    /// **Detection**: Uses UWB distance (≤50cm) + horizontal/vertical angle alignment
-    /// **Accuracy**: ~10cm distance, ~5° angle precision
-    /// - Parameter deviceID: The UUID of the device to check
-    /// - Returns: True if pointed at the device with aligned angles
-    func isPointingAt(deviceID: UUID) -> Bool
-
     /// Determines if another device is nearby based on distance only (no angle checking)
     /// **Detection**: Uses UWB distance measurement only (≤50cm)
     /// - Parameter deviceID: The UUID of the device to check
     /// - Returns: True if device is within proximity range, regardless of pointing direction
     func isNearby(deviceID: UUID) -> Bool
 
-    /// Determines if devices are approximately touching (≤10cm) and pointed at each other
-    /// **Detection**: Distance ≤10cm AND angles aligned (horizontal ≤15°, vertical ≤10°)
+    /// Determines if devices are approximately touching (≤10cm)
+    /// **Detection**: Distance ≤10cm only (no directional checks)
     /// **Use case**: Physical "boop" interaction between devices
     /// - Parameter deviceID: The UUID of the device to check
-    /// - Returns: True if devices are touching distance with aligned angles
+    /// - Returns: True if devices are within touching distance
     func isApproximatelyTouching(deviceID: UUID) -> Bool
 
     /// Start UWB ranging session with a peer
@@ -53,11 +44,9 @@ enum DevicePositionCategory: UInt8 {
 class UWBManager: NSObject, UWBManaging {
 
     // MARK: - Configuration
-    private struct PointingThresholds {
+    private struct DistanceThresholds {
         static let touchingDistance: Float = 0.05     // meters (5cm) - touching range
-        static let maxDistance: Float = 0.5          // meters (50cm) - maximum for pointing
-        static let maxHorizontalAngle: Float = 15.0  // degrees - pointing cone
-        static let maxVerticalAngle: Float = 10.0    // degrees - height alignment
+        static let maxDistance: Float = 0.5          // meters (50cm) - maximum proximity range
     }
 
     // MARK: - Properties
@@ -105,61 +94,6 @@ class UWBManager: NSObject, UWBManaging {
     }
 
     // MARK: - Public Methods
-    func isPointingAt(deviceID: UUID) -> Bool {
-        print("🔍 UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) called")
-
-        guard let object = nearbyObjects[deviceID] else {
-            // No UWB data available for this device
-            print("❌ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - NO UWB DATA (not in nearbyObjects)")
-            return false
-        }
-
-        // Check distance - must be within pointing range
-        guard let distance = object.distance else {
-            print("❌ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - NO DISTANCE DATA")
-            return false
-        }
-
-        print("📏 UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max: \(PointingThresholds.maxDistance)m)")
-
-        // Check distance bound - not too far
-        if distance > PointingThresholds.maxDistance {
-            print("❌ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - TOO FAR (distance: \(String(format: "%.3f", distance))m > \(PointingThresholds.maxDistance)m)")
-            return false
-        }
-
-        // Check direction - must be aligned horizontally and vertically
-        guard let direction = object.direction else {
-            // No direction data, fallback to distance only
-            print("⚠️ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - NO DIRECTION DATA, using distance only: \(distance <= PointingThresholds.maxDistance)")
-            return distance <= PointingThresholds.maxDistance
-        }
-
-        // Log raw direction vector
-        print("📐 UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - Raw direction vector: x=\(String(format: "%.4f", direction.x)), y=\(String(format: "%.4f", direction.y)), z=\(String(format: "%.4f", direction.z))")
-
-        // Extract horizontal and vertical angles
-        let horizontalAngle = abs(atan2(direction.y, direction.x) * 180 / .pi)
-        let verticalAngle = abs(atan2(direction.z,
-            sqrt(direction.x * direction.x + direction.y * direction.y)) * 180 / .pi)
-
-        let isAngleAligned = horizontalAngle <= PointingThresholds.maxHorizontalAngle
-        let isHeightAligned = verticalAngle <= PointingThresholds.maxVerticalAngle
-
-        print("📐 UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - h-angle: \(String(format: "%.2f", horizontalAngle))° (max: \(PointingThresholds.maxHorizontalAngle)°) [\(isAngleAligned ? "✓" : "✗")]")
-        print("📐 UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - v-angle: \(String(format: "%.2f", verticalAngle))° (max: \(PointingThresholds.maxVerticalAngle)°) [\(isHeightAligned ? "✓" : "✗")]")
-
-        let isPointing = isAngleAligned && isHeightAligned
-
-        if isPointing {
-            print("✅ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - POINTING CONFIRMED")
-        } else {
-            print("❌ UWB: isPointingAt(\(deviceID.uuidString.prefix(8))) - NOT POINTING (angles not aligned)")
-        }
-
-        return isPointing
-    }
-
     func isNearby(deviceID: UUID) -> Bool {
         print("🔍 UWB: isNearby(\(deviceID.uuidString.prefix(8))) called")
 
@@ -175,10 +109,10 @@ class UWBManager: NSObject, UWBManaging {
             return false
         }
 
-        print("📏 UWB: isNearby(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max: \(PointingThresholds.maxDistance)m)")
+        print("📏 UWB: isNearby(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max: \(DistanceThresholds.maxDistance)m)")
 
         // Check distance bound - not too far
-        let isInRange = distance <= PointingThresholds.maxDistance
+        let isInRange = distance <= DistanceThresholds.maxDistance
 
         if isInRange {
             print("✅ UWB: isNearby(\(deviceID.uuidString.prefix(8))) - IN RANGE")
@@ -204,42 +138,15 @@ class UWBManager: NSObject, UWBManaging {
             return false
         }
 
-        print("📏 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max touching: \(PointingThresholds.touchingDistance)m)")
+        print("📏 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max touching: \(DistanceThresholds.touchingDistance)m)")
 
-        // Must be within 10cm
-        if distance > PointingThresholds.touchingDistance {
-            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - TOO FAR (distance: \(String(format: "%.3f", distance))m > \(PointingThresholds.touchingDistance)m)")
-            return false
-        }
-
-        // Check direction - must be aligned horizontally and vertically
-        guard let direction = object.direction else {
-            // No direction data, consider touching if distance is close enough
-            print("⚠️ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - NO DIRECTION DATA, considering as touching based on distance")
-            print("✅ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8)) - TOUCHING CONFIRMED (no angle check)")
-            return true
-        }
-
-        // Log raw direction vector
-        print("📐 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - Raw direction vector: x=\(String(format: "%.4f", direction.x)), y=\(String(format: "%.4f", direction.y)), z=\(String(format: "%.4f", direction.z))")
-
-        // Extract horizontal and vertical angles
-        let horizontalAngle = abs(atan2(direction.y, direction.x) * 180 / .pi)
-        let verticalAngle = abs(atan2(direction.z,
-            sqrt(direction.x * direction.x + direction.y * direction.y)) * 180 / .pi)
-
-        let isAngleAligned = horizontalAngle <= PointingThresholds.maxHorizontalAngle
-        let isHeightAligned = verticalAngle <= PointingThresholds.maxVerticalAngle
-
-        print("📐 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - h-angle: \(String(format: "%.2f", horizontalAngle))° (max: \(PointingThresholds.maxHorizontalAngle)°) [\(isAngleAligned ? "✓" : "✗")]")
-        print("📐 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - v-angle: \(String(format: "%.2f", verticalAngle))° (max: \(PointingThresholds.maxVerticalAngle)°) [\(isHeightAligned ? "✓" : "✗")]")
-
-        let isTouching = isAngleAligned && isHeightAligned
+        // Check if within touching distance (5cm)
+        let isTouching = distance <= DistanceThresholds.touchingDistance
 
         if isTouching {
             print("✅ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - TOUCHING CONFIRMED")
         } else {
-            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - NOT TOUCHING (angles not aligned)")
+            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - TOO FAR (distance: \(String(format: "%.3f", distance))m > \(DistanceThresholds.touchingDistance)m)")
         }
 
         return isTouching
@@ -329,19 +236,7 @@ extension UWBManager: NISessionDelegate {
                 await self.uwbManagerDelegate?.onNearbyObjectsUpdate(updatedObject: deviceID)
 
                 if let distance = object.distance {
-                    if let direction = object.direction {
-                        // Full data available
-                        let horizontalAngle = abs(atan2(direction.y, direction.x) * 180 / .pi)
-                        let verticalAngle = abs(atan2(direction.z,
-                            sqrt(direction.x * direction.x + direction.y * direction.y)) * 180 / .pi)
-
-                        print("📏 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - distance: \(String(format: "%.3f", distance))m")
-                        print("📐 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - Raw vector: x=\(String(format: "%.4f", direction.x)), y=\(String(format: "%.4f", direction.y)), z=\(String(format: "%.4f", direction.z))")
-                        print("📐 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - h-angle: \(String(format: "%.2f", horizontalAngle))°, v-angle: \(String(format: "%.2f", verticalAngle))°")
-                    } else {
-                        // Distance only, no direction
-                        print("📏 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - distance: \(String(format: "%.3f", distance))m (NO DIRECTION DATA)")
-                    }
+                    print("📏 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - distance: \(String(format: "%.3f", distance))m")
                 } else {
                     print("⚠️ UWB: UPDATE \(deviceID.uuidString.prefix(8)) - NO DISTANCE DATA")
                 }
