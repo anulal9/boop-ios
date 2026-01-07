@@ -273,11 +273,22 @@ struct ProfileSetupView: View {
     
     private func loadProfileFromSupabase() async {
         #if canImport(Supabase)
-        guard let client = SupabaseClientProvider.shared.client else { return }
+        guard let client = SupabaseClientProvider.shared.client else {
+            print("❌ [Profile] Supabase client is nil")
+            return
+        }
         await MainActor.run { isLoading = true }
         do {
+            print("🔵 [Profile] Starting profile load...")
             let session = try await client.auth.session
+            print("🔵 [Profile] Auth session obtained - User ID: \(session.user.id)")
+            
             let remoteProfile = try await SupabaseClientProvider.shared.getProfile(userId: session.user.id)
+            print("✅ [Profile] Remote profile fetched")
+            print("   - First Name: \(remoteProfile.firstName ?? "nil")")
+            print("   - Last Name: \(remoteProfile.lastName ?? "nil")")
+            print("   - Avatar URL: \(remoteProfile.avatarURL ?? "nil")")
+            
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withFullDate]
 
@@ -288,17 +299,59 @@ struct ProfileSetupView: View {
                 return nil
             }()
 
-            if let avatarURL = remoteProfile.avatarURL, let url = URL(string: avatarURL) {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                #if canImport(UIKit)
-                if let uiImage = UIImage(data: data) {
-                    let image = Image(uiImage: uiImage)
-                    await MainActor.run {
-                        self.avatarImage = AvatarImage(image: image, data: data)
-                        self.currentAvatarURL = avatarURL
+            if let avatarURL = remoteProfile.avatarURL {
+                print("🔵 [Profile] Avatar URL found: \(avatarURL)")
+                
+                // Extract the storage path from URL for authenticated download
+                if let pathRange = avatarURL.range(of: "/avatars/") {
+                    let storagePath = String(avatarURL[pathRange.upperBound...])
+                    let pathComponents = storagePath.split(separator: "/")
+                    print("🔵 [Profile] Storage path: \(storagePath)")
+                    print("   - Path components: \(pathComponents)")
+                    if !pathComponents.isEmpty {
+                        let folderUserID = String(pathComponents[0]).lowercased()
+                        let currentUserID = session.user.id.uuidString.lowercased()
+                        print("   - Folder (User ID): \(folderUserID)")
+                        print("   - Current User ID: \(currentUserID)")
+                        let userIDMatch = folderUserID == currentUserID
+                        print("   - User ID Match: \(userIDMatch)")
                     }
+                    
+                    // Download using authenticated storage access
+                    print("🔵 [Profile] Downloading image using authenticated storage...")
+                    do {
+                        let data = try await SupabaseClientProvider.shared.downloadAvatar(path: storagePath)
+                        print("✅ [Profile] Image data downloaded - Size: \(data.count) bytes")
+                        
+                        #if canImport(UIKit)
+                        if let uiImage = UIImage(data: data) {
+                            print("✅ [Profile] UIImage created successfully")
+                            print("   - Size: \(uiImage.size)")
+                            print("   - Scale: \(uiImage.scale)")
+                            
+                            let image = Image(uiImage: uiImage)
+                            await MainActor.run {
+                                self.avatarImage = AvatarImage(image: image, data: data)
+                                self.currentAvatarURL = avatarURL
+                                print("✅ [Profile] Avatar image set in UI state")
+                            }
+                        } else {
+                            print("❌ [Profile] Failed to create UIImage from downloaded data")
+                            print("   - Data size: \(data.count) bytes")
+                        }
+                        #else
+                        print("⚠️ [Profile] UIKit not available, skipping image conversion")
+                        #endif
+                    } catch {
+                        print("❌ [Profile] Failed to download image: \(error)")
+                        print("   - Error type: \(type(of: error))")
+                        print("   - Error description: \(error.localizedDescription)")
+                    }
+                } else {
+                    print("⚠️ [Profile] Failed to extract storage path from URL: \(avatarURL)")
                 }
-                #endif
+            } else {
+                print("⚠️ [Profile] No avatar URL in remote profile")
             }
 
             await MainActor.run {
@@ -307,8 +360,12 @@ struct ProfileSetupView: View {
                 self.dateOfBirth = dob ?? Date()
                 self.currentAvatarURL = remoteProfile.avatarURL
                 self.isLoading = false
+                print("✅ [Profile] Profile state updated")
             }
         } catch {
+            print("❌ [Profile] Error loading profile: \(error)")
+            print("   - Error type: \(type(of: error))")
+            print("   - Error description: \(error.localizedDescription)")
             await MainActor.run { errorMessage = "Failed to load profile"; isLoading = false }
         }
         #endif
