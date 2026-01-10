@@ -182,15 +182,13 @@ class BluetoothManager: NSObject, ObservableObject {
 // MARK: - BluetoothServiceDelegate
 extension BluetoothManager: BluetoothServiceDelegate {
 
-    func didDiscoverDevice(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
-        print("🔍 BT Manager: didDiscoverDevice(\(deviceID.uuidString.prefix(8))) RSSI: \(rssi)")
+    func didReceiveUpdate(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
+        print("🔍 BT Manager: didReceiveUpdate(\(deviceID.uuidString.prefix(8))) RSSI: \(rssi)")
         // Add to nearby devices if not already present
         if !nearbyDevices.keys.contains(deviceID) {
             nearbyDevices[deviceID] = DevicePositionCategory.Unknown
             print("✅ BT Manager: Added device to nearbyDevices - total: \(nearbyDevices.count)")
             print("📊 BT Manager: State after discovery - nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
-        } else {
-            print("⚠️ BT Manager: Device already in nearbyDevices")
         }
     }
 

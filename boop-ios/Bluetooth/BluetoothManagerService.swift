@@ -10,7 +10,7 @@ import NearbyInteraction
 // MARK: - Delegate Protocol
 @MainActor
 protocol BluetoothServiceDelegate: AnyObject {
-    func didDiscoverDevice(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber)
+    func didReceiveUpdate(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber)
     func didRemoveDevice(_ deviceID: UUID)
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral)
     func didDisconnect(from deviceID: UUID)
@@ -198,7 +198,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                         rssi RSSI: NSNumber) {
         let deviceID = peripheral.identifier
         Task { @MainActor in
-            self.delegate?.didDiscoverDevice(deviceID, peripheral: peripheral, rssi: RSSI) }
+            self.delegate?.didReceiveUpdate(deviceID, peripheral: peripheral, rssi: RSSI) }
     }
     
     private func receivedBLERequestFromCentral(request: CBATTRequest) {
