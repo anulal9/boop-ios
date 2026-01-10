@@ -66,7 +66,11 @@ class BluetoothManager: NSObject, ObservableObject {
 
     func connect(to deviceID: UUID) {
         Task {
-            await service.connect(to: deviceID)
+            guard let peripheral = connectedPeripherals[deviceID]
+            else {
+                return
+            }
+            await service.connect(to: peripheral)
         }
     }
 
@@ -78,8 +82,12 @@ class BluetoothManager: NSObject, ObservableObject {
 
     func disconnect(from deviceID: UUID) {
         Task {
-            await service.disconnect(from: deviceID)
+            guard let peripheral = connectedPeripherals[deviceID] else {
+                return
+            }
+            await service.disconnect(from: peripheral)
         }
+        
     }
 
     // MARK: - UWB Integration
@@ -191,6 +199,7 @@ extension BluetoothManager: BluetoothServiceDelegate {
         // Remove from nearby devices
         nearbyDevices.removeValue(forKey: deviceID)
         connectedPeripherals.removeValue(forKey: deviceID)
+        
         print("✅ BT Manager: Removed device from nearbyDevices - total: \(nearbyDevices.count)")
         print("📊 BT Manager: State after removal - nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }

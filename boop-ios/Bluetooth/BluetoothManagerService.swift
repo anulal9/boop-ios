@@ -30,10 +30,9 @@ protocol BoopDelegate: AnyObject {
 protocol BluetoothManagerService {
     func start() async
     func stop() async
-    func connect(to deviceID: UUID) async
+    func connect(to peripheral: CBPeripheral) async
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async
-    func disconnect(from deviceID: UUID) async
-    func getConnectedPeripheral(for deviceID: UUID) -> CBPeripheral?
+    func disconnect(from peripheral: CBPeripheral) async
 }
 
 class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
@@ -55,13 +54,13 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
     private var hasStarted = false
 
     // Track devices and peripherals
-    private var discoveredDevices: [UUID: (lastSeen: Date, peripheral: CBPeripheral, rssi: NSNumber)] = [:]
+//    private var discoveredDevices: [UUID: (lastSeen: Date, peripheral: CBPeripheral, rssi: NSNumber)] = [:]
     private var messageCharacteristic: CBMutableCharacteristic?
     private var uwbTokenCharacteristic: CBMutableCharacteristic?
-    private var connectedPeripherals: [UUID: CBPeripheral] = [:]
+//    private var connectedPeripherals: [UUID: CBPeripheral] = [:]
 
     // Track connected centrals (peers who have connected to us)
-    private var connectedCentrals: [UUID: CBCentral] = [:]
+//    private var connectedCentrals: [UUID: CBCentral] = [:]
 
     // UWB token data
     private var uwbDiscoveryTokenData: Data?
@@ -85,7 +84,6 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
     func stop() async {
         peripheralManager.stopAdvertising()
         centralManager.stopScan()
-        discoveredDevices = [:]
         hasStarted = false
         print("🛑 Stopped advertising and scanning")
     }
@@ -94,15 +92,10 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         self.boopDelegate = boopDelegate
     }
 
-    func connect(to deviceID: UUID) async {
-        guard let deviceInfo = discoveredDevices[deviceID] else {
-            print("⚠️ Device not found in discovered devices")
-            return
-        }
-        let peripheral = deviceInfo.peripheral
+    func connect(to peripheral: CBPeripheral) async {
         peripheral.delegate = self
         centralManager.connect(peripheral, options: nil)
-        print("🔗 Connecting to \(deviceID)")
+        print("🔗 Connecting to \(peripheral.identifier)")
     }
 
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async {
@@ -117,14 +110,9 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         print("📤 Sent \(message.messageType) to \(peripheral.identifier)")
     }
 
-    func disconnect(from deviceID: UUID) async {
-        guard let peripheral = connectedPeripherals[deviceID] else { return }
+    func disconnect(from peripheral: CBPeripheral) async {
+        print("🔌 Disconnecting from \(peripheral.identifier)")
         centralManager.cancelPeripheralConnection(peripheral)
-        print("🔌 Disconnecting from \(deviceID)")
-    }
-
-    func getConnectedPeripheral(for deviceID: UUID) -> CBPeripheral? {
-        return connectedPeripherals[deviceID]
     }
 
     func updateUWBToken(_ tokenData: Data?) {
@@ -142,10 +130,6 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
             self.hasStarted = true
             self.startAdvertising()
             self.startScanning()
-
-            Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-                self?.removeStaleDevices()
-            }
         }
     }
 
@@ -187,26 +171,7 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         print("🔍 Started scanning")
     }
 
-    private func removeStaleDevices() {
-        let now = Date()
-        let threshold: TimeInterval = 5
-        let previousCount = discoveredDevices.count
-
-        let removedDevices = discoveredDevices.filter { now.timeIntervalSince($0.value.lastSeen) >= threshold }
-        discoveredDevices = discoveredDevices.filter { now.timeIntervalSince($0.value.lastSeen) < threshold }
-
-        if discoveredDevices.count != previousCount {
-            let removedCount = previousCount - discoveredDevices.count
-            print("📱 BLE: Removed \(removedCount) stale device(s)")
-
-            // Notify delegate of removed devices
-            Task { @MainActor in
-                for (deviceID, _) in removedDevices {
-                    self.delegate?.didRemoveDevice(deviceID)
-                }
-            }
-        }
-    }
+    
 
 }
 
@@ -232,20 +197,8 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                         advertisementData: [String : Any],
                         rssi RSSI: NSNumber) {
         let deviceID = peripheral.identifier
-        let isNewDevice = discoveredDevices[deviceID] == nil
-        
-        if isNewDevice {
-            // Update discovered devices (RSSI and timestamp)
-            discoveredDevices[deviceID] = (Date(), peripheral, RSSI)
-
-            print("📱 BLE Service: New device discovered - \(deviceID.uuidString.prefix(8)), RSSI: \(RSSI) dBm")
-            print("📊 BLE Service: discoveredDevices count: \(discoveredDevices.count), connectedPeripherals: \(connectedPeripherals.count)")
-            Task { @MainActor in
-                self.delegate?.didDiscoverDevice(deviceID, peripheral: peripheral, rssi: RSSI)
-            }
-        } else {
-            discoveredDevices[deviceID] = (lastSeen: Date(), peripheral: discoveredDevices[deviceID]?.peripheral, rssi: RSSI) as? (lastSeen: Date, peripheral: CBPeripheral, rssi: NSNumber)
-        }
+        Task { @MainActor in
+            self.delegate?.didDiscoverDevice(deviceID, peripheral: peripheral, rssi: RSSI) }
     }
     
     private func receivedBLERequestFromCentral(request: CBATTRequest) {
@@ -285,9 +238,9 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                     let peerID = central.identifier
                     print("📍 BLE Service: Received UWB token via write from central \(peerID.uuidString.prefix(8)) (size: \(tokenData.count) bytes)")
                     
-                    if connectedCentrals[peerID] == nil {
+//                    if connectedCentrals[peerID] == nil {
                         // Track this central
-                        connectedCentrals[peerID] = central
+//                        connectedCentrals[peerID] = central
                         
                         // Now we can start ranging on the peripheral side too!
                         print("✅ BLE Service: Starting bidirectional UWB ranging from peripheral side")
@@ -296,9 +249,9 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                         }
                         
                         peripheralManager.respond(to: request, withResult: .success)
-                    } else {
-                        peripheralManager.respond(to: request, withResult: .requestNotSupported)
-                    }
+//                    } else {
+//                        peripheralManager.respond(to: request, withResult: .requestNotSupported)
+//                    }
                 }
             } catch {
                 print("⚠️ Failed to decode received UWB token: \(error.localizedDescription)")
@@ -332,8 +285,8 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
             // Track this central so we can match writes later
             let central = request.central
             print("📍 BLE Service: Central \(central.identifier.uuidString.prefix(8)) reading our UWB token")
-            if connectedCentrals[central.identifier] == nil {
-                connectedCentrals[central.identifier] = central
+//            if connectedCentrals[central.identifier] == nil {
+//                connectedCentrals[central.identifier] = central
                 
                 // Provide our UWB token
                 if let tokenData = uwbDiscoveryTokenData {
@@ -343,10 +296,10 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                 } else {
                     peripheralManager.respond(to: request, withResult: .attributeNotFound)
                 }
-            } else {
-                print("BLE Service: CBPeripheralManagerDelegate [Peripheral] - Central Already Exists")
-                peripheralManager.respond(to: request, withResult: .requestNotSupported)
-            }
+//            } else {
+//                print("BLE Service: CBPeripheralManagerDelegate [Peripheral] - Central Already Exists")
+//                peripheralManager.respond(to: request, withResult: .requestNotSupported)
+//            }
         } else {
             peripheralManager.respond(to: request, withResult: .requestNotSupported)
         }
@@ -355,8 +308,6 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
     func centralManager(_ central: CBCentralManager,
                        didConnect peripheral: CBPeripheral) {
         print("✅ BLE Service: Connected to \(peripheral.identifier.uuidString.prefix(8))")
-        connectedPeripherals[peripheral.identifier] = peripheral
-        print("📊 BLE Service: connectedPeripherals count: \(connectedPeripherals.count)")
         peripheral.discoverServices([boopServiceUUID])
         print("🔍 BLE Service: Discovering services for \(peripheral.identifier.uuidString.prefix(8))")
 
@@ -373,9 +324,6 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
         } else {
             print("❌ BLE Service: Disconnected from \(peripheral.identifier.uuidString.prefix(8))")
         }
-        connectedPeripherals.removeValue(forKey: peripheral.identifier)
-        print("📊 BLE Service: connectedPeripherals count: \(connectedPeripherals.count)")
-
         Task { @MainActor in
             self.delegate?.didDisconnect(from: peripheral.identifier)
         }
@@ -435,9 +383,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
                 // Write our UWB token to peer
                 if let ourToken = uwbDiscoveryTokenData {
                     print("📍 BLE Service: Writing our UWB token to \(peripheral.identifier.uuidString.prefix(8)) (token size: \(ourToken.count) bytes)")
-                    if discoveredDevices[peripheral.identifier] == nil {
-                        peripheral.writeValue(ourToken, for: characteristic, type: .withResponse)
-                    }
+                    peripheral.writeValue(ourToken, for: characteristic, type: .withResponse)
                 } else {
                     print("⚠️ BLE Service: No UWB token available to send to \(peripheral.identifier.uuidString.prefix(8))")
                 }
