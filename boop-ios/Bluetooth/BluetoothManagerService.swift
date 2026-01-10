@@ -197,10 +197,6 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                         advertisementData: [String : Any],
                         rssi RSSI: NSNumber) {
         let deviceID = peripheral.identifier
-        // connect to peripheral + set delegate
-        peripheral.delegate = self
-        centralManager.connect(peripheral, options: nil)
-        print("🔗 Connecting to \(peripheral.identifier)")
         
         Task { @MainActor in
             self.delegate?.didDiscover(deviceID, peripheral: peripheral, rssi: RSSI) }

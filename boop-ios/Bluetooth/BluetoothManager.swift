@@ -184,6 +184,11 @@ extension BluetoothManager: BluetoothServiceDelegate {
 
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
         print("🔍 BT Manager: didReceiveUpdate(\(deviceID.uuidString.prefix(8))) RSSI: \(rssi)")
+        if connectedPeripherals[deviceID] == nil {
+            Task {
+                await service.connect(to: peripheral)
+            }
+        }
         // Add to nearby devices if not already present
         if !nearbyDevices.keys.contains(deviceID) {
             nearbyDevices[deviceID] = DevicePositionCategory.Unknown
