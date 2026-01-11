@@ -255,6 +255,7 @@ extension UWBManager: NISessionDelegate {
                 self.nearbyObjects.removeValue(forKey: deviceID)
                 print("📍 UWB: Lost connection to \(deviceID.uuidString.prefix(8)), reason: \(reason.rawValue)")
             }
+            printDiagnostics()
         }
     }
 
@@ -262,18 +263,30 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("⚠️ UWB: Session invalidated - \(error.localizedDescription)")
             nearbyObjects.removeAll()
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionWasSuspended(_ session: NISession) {
         Task { @MainActor in
             print("⚠️ UWB: Session suspended")
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionSuspensionEnded(_ session: NISession) {
         Task { @MainActor in
             print("✅ UWB: Session resumed")
+            printDiagnostics()
+            self.deviceTokens.forEach { (deviceId: UUID, token: NIDiscoveryToken) in
+                self.startRanging(to: deviceId, token: token)
+            }
+        }
+    }
+    nonisolated func sessionDidStartRunning(_ session: NISession) {
+        Task { @MainActor in
+            print("UWB: Session did start running")
+            printDiagnostics()
         }
     }
 }
