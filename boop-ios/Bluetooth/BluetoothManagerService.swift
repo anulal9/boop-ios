@@ -19,6 +19,7 @@ protocol BluetoothServiceDelegate: AnyObject {
     func didReceiveConnectionReject(from senderUUID: UUID)
     func didReceiveDisconnect(from senderUUID: UUID)
     func didExchangeUWBToken(for deviceID: UUID, token: NIDiscoveryToken)
+    func didReceiveUWBTokenUpdate(for peripheral: CBPeripheral, newToken: NIDiscoveryToken)
 }
 
 @MainActor
@@ -239,20 +240,12 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                     let peerID = central.identifier
                     print("📍 BLE Service: Received UWB token via write from central \(peerID.uuidString.prefix(8)) (size: \(tokenData.count) bytes)")
                     
-//                    if connectedCentrals[peerID] == nil {
-                        // Track this central
-//                        connectedCentrals[peerID] = central
-                        
-                        // Now we can start ranging on the peripheral side too!
-                        print("✅ BLE Service: Starting bidirectional UWB ranging from peripheral side")
-                        Task { @MainActor in
-                            self.delegate?.didExchangeUWBToken(for: peerID, token: token)
-                        }
-                        
-                        peripheralManager.respond(to: request, withResult: .success)
-//                    } else {
-//                        peripheralManager.respond(to: request, withResult: .requestNotSupported)
-//                    }
+                    print("✅ BLE Service: Starting bidirectional UWB ranging from peripheral side")
+                    Task { @MainActor in
+                        self.delegate?.didExchangeUWBToken(for: peerID, token: token)
+                    }
+                    
+                    peripheralManager.respond(to: request, withResult: .success)
                 }
             } catch {
                 print("⚠️ Failed to decode received UWB token: \(error.localizedDescription)")
@@ -429,9 +422,8 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
                     ofClass: NIDiscoveryToken.self,
                     from: tokenData
                 ) {
-                    print("✅ BLE Service: Successfully decoded UWB token from \(peripheral.identifier.uuidString.prefix(8))")
                     Task { @MainActor in
-                        self.delegate?.didExchangeUWBToken(for: peripheral.identifier, token: token)
+                        self.delegate?.didReceiveUWBTokenUpdate(for: peripheral, newToken: token)
                     }
                 }
             } catch {

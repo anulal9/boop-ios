@@ -23,6 +23,9 @@ protocol UWBManaging: AnyObject {
     func stopRanging(to deviceID: UUID)
     
     func setUpDelegate(uwbManagerDelegate: UWBManagerDelegate)
+    
+    /// Add discovery token for this peer
+    func registerPeerDiscoveryToken(from device: UUID, token: NIDiscoveryToken)
 
     /// Get the current discovery token for this device
     var discoveryToken: NIDiscoveryToken? { get }
@@ -96,6 +99,10 @@ class UWBManager: NSObject, UWBManaging {
     
     func setUpDelegate(uwbManagerDelegate managerDelegate: UWBManagerDelegate) {
         uwbManagerDelegate = managerDelegate
+    }
+    
+    func registerPeerDiscoveryToken(from deviceID: UUID, token discoveryToken: NIDiscoveryToken) {
+        self.deviceTokens[deviceID] = discoveryToken
     }
 
     // MARK: - Public Methods
@@ -293,6 +300,15 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("UWB: Session did start running")
             printDiagnostics()
+            guard let peerToken = session.discoveryToken else {
+                print("UWB: Could not find peer token for session")
+                return
+            }
+            guard let peerDeviceID = deviceID(for: peerToken) else {
+                print("UWB: Could not find device id for session token. ")
+                return
+            }
+            self.startRanging(to: peerDeviceID, peerToken: peerToken)
         }
     }
 }
