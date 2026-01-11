@@ -220,6 +220,8 @@ extension BluetoothManager: BluetoothServiceDelegate {
         connectedPeripherals.removeValue(forKey: deviceID)
         discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
+        uwbManager?.stopRanging(to: deviceID)
+        
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
         print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
