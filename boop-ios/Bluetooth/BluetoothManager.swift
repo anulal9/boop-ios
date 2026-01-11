@@ -99,7 +99,7 @@ class BluetoothManager: NSObject, ObservableObject {
 
     private func syncUWBRanging(with currentDevices: Set<UUID>) {
         print("🔄 BT Manager: syncUWBRanging called")
-        print("📊 BT Manager: Current state - nearbyDevices: \(nearbyDevices.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count), connectedPeripherals: \(connectedPeripherals.count)")
+        print("📊 BT Manager: Current state - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count), connectedPeripherals: \(connectedPeripherals.count)")
         print("📋 BT Manager: nearbyDevices: [\(nearbyDevices.keys.map { $0.uuidString.prefix(8) }.joined(separator: ", "))]")
         print("📋 BT Manager: devicesWithUWBRanging: [\(devicesWithUWBRanging.map { $0.uuidString.prefix(8) }.joined(separator: ", "))]")
         print("📋 BT Manager: connectedPeripherals: [\(connectedPeripherals.keys.map { $0.uuidString.prefix(8) }.joined(separator: ", "))]")
@@ -185,7 +185,6 @@ class BluetoothManager: NSObject, ObservableObject {
 extension BluetoothManager: BluetoothServiceDelegate {
 
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
-        print("🔍 BT Manager: didDiscover(\(deviceID.uuidString.prefix(8))) RSSI: \(rssi)")
             Task {
                 if discoveredDevices[deviceID] == nil {
                     discoveredDevices[deviceID] = peripheral
@@ -221,7 +220,6 @@ extension BluetoothManager: BluetoothServiceDelegate {
         connectedPeripherals.removeValue(forKey: deviceID)
         discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
-        devicesWithUWBRanging.remove(deviceID)
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
         print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
@@ -267,12 +265,6 @@ extension BluetoothManager: UWBManagerDelegate {
             newState = DevicePositionCategory.InRange
         } else {
             newState = DevicePositionCategory.OutOfRange
-        }
-        if (newState == DevicePositionCategory.OutOfRange) {
-            guard let _ = nearbyDevices[updatedObject]  else {
-                return
-            }
-            nearbyDevices.removeValue(forKey: updatedObject)
         }
         if newState != currentState {
             nearbyDevices[updatedObject] = newState
