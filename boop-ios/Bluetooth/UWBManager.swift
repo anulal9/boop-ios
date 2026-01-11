@@ -278,6 +278,9 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("✅ UWB: Session resumed")
             printDiagnostics()
+            self.deviceTokens.forEach { (deviceId: UUID, token: NIDiscoveryToken) in
+                self.startRanging(to: deviceId, token: token)
+            }
         }
     }
     nonisolated func sessionDidStartRunning(_ session: NISession) {
