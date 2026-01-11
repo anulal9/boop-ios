@@ -11,7 +11,7 @@ class BluetoothManager: NSObject, ObservableObject {
     @Published var connectionRequests: [UUID: ConnectionRequest] = [:]
     @Published var connectionResponses: [UUID: ConnectionResponse] = [:]
     
-    var discoveredDevices: Set<UUID> = []
+    var discoveredDevices: [UUID: CBPeripheral] = [:]
 
     // MARK: - Internal State
     var connectedPeripherals: [UUID: CBPeripheral] = [:]
@@ -187,8 +187,8 @@ extension BluetoothManager: BluetoothServiceDelegate {
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
         print("🔍 BT Manager: didDiscover(\(deviceID.uuidString.prefix(8))) RSSI: \(rssi)")
             Task {
-                if !discoveredDevices.contains(deviceID) {
-                    discoveredDevices.insert(deviceID)
+                if discoveredDevices[deviceID] == nil {
+                    discoveredDevices[deviceID] = peripheral
                     print("✅ BT Manager: Added device to discoveredDevices - total: \(discoveredDevices.count)")
                 await service.connect(to: peripheral)
             }
@@ -198,12 +198,12 @@ extension BluetoothManager: BluetoothServiceDelegate {
     func didRemoveDevice(_ deviceID: UUID) {
         print("🗑️ BT Manager: didRemoveDevice(\(deviceID.uuidString.prefix(8)))")
         // Remove from nearby devices
-        discoveredDevices.remove(deviceID)
+        discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
         connectedPeripherals.removeValue(forKey: deviceID)
         
         print("✅ BT Manager: Removed device from nearbyDevices - total: \(nearbyDevices.count)")
-        print("📊 BT Manager: State after removal - discoveredDevices: \(discoveredDevices), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
+        print("📊 BT Manager: State after removal - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
 
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral) {
@@ -212,18 +212,18 @@ extension BluetoothManager: BluetoothServiceDelegate {
             connectedPeripherals[deviceID] = peripheral
             print("✅ BT Manager: Added peripheral to connectedPeriphals - total: \(connectedPeripherals.count)")
         }
-        print("📊 BT Manager: State after discovery - discoveredDevices: \(discoveredDevices), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
+        print("📊 BT Manager: State after discovery - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
 
     func didDisconnect(from deviceID: UUID) {
         print("🔌 BT Manager: didDisconnect(\(deviceID.uuidString.prefix(8)))")
         
         connectedPeripherals.removeValue(forKey: deviceID)
-        discoveredDevices.remove(deviceID)
+        discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
         devicesWithUWBRanging.remove(deviceID)
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
-        print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
+        print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
 
     func didReceiveConnectionRequest(from senderUUID: UUID) {
@@ -252,7 +252,7 @@ extension BluetoothManager: BluetoothServiceDelegate {
         uwbManager?.startRanging(to: deviceID, token: token)
         devicesWithUWBRanging.insert(deviceID)
         print("✅ BT Manager: Started UWB ranging with \(deviceID.uuidString.prefix(8)) - total ranging: \(devicesWithUWBRanging.count)")
-        print("📊 BT Manager: State after UWB token exchange - discoveredDevices: \(discoveredDevices), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
+        print("📊 BT Manager: State after UWB token exchange - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
     }
 }
 // MARK: - BluetoothServiceDelegate
