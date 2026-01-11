@@ -188,11 +188,7 @@ class UWBManager: NSObject, UWBManaging {
     func stopRanging(to deviceID: UUID) {
         deviceTokens.removeValue(forKey: deviceID)
         nearbyObjects.removeValue(forKey: deviceID)
-
-        // If no more devices, invalidate session
-        if deviceTokens.isEmpty {
-            niSession?.invalidate()
-        }
+        niSession?.invalidate()
 
         print("📍 UWB: Stopped ranging to \(deviceID.uuidString.prefix(8))")
     }
