@@ -249,7 +249,7 @@ extension BluetoothManager: BluetoothServiceDelegate {
     func didExchangeUWBToken(for deviceID: UUID, token: NIDiscoveryToken) {
         print("📍 BT Manager: didExchangeUWBToken(\(deviceID.uuidString.prefix(8)))")
         // Start UWB ranging with this peer
-        uwbManager?.startRanging(to: deviceID, token: token)
+        uwbManager?.startRanging(to: deviceID, peerToken: token)
         devicesWithUWBRanging.insert(deviceID)
         print("✅ BT Manager: Started UWB ranging with \(deviceID.uuidString.prefix(8)) - total ranging: \(devicesWithUWBRanging.count)")
         print("📊 BT Manager: State after UWB token exchange - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")
