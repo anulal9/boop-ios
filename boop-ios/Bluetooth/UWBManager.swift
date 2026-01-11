@@ -17,7 +17,7 @@ protocol UWBManaging: AnyObject {
     func isApproximatelyTouching(deviceID: UUID) -> Bool
 
     /// Start UWB ranging session with a peer
-    func startRanging(to deviceID: UUID, token: NIDiscoveryToken)
+    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken)
 
     /// Stop UWB ranging session with a peer
     func stopRanging(to deviceID: UUID)
@@ -77,10 +77,15 @@ class UWBManager: NSObject, UWBManaging {
             print("❌ UWB: NISession is NOT SUPPORTED on this device")
             return
         }
+        
+        guard niSession == nil else {
+            print("UWB: NISession already exists, skipping setup")
+            return
+        }
 
         niSession = NISession()
         niSession?.delegate = self
-
+        
         if let token = niSession?.discoveryToken {
             print("✅ UWB: Session initialized successfully")
             print("📍 UWB: Discovery token available (size: \(try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true).count) bytes)")
@@ -152,8 +157,10 @@ class UWBManager: NSObject, UWBManaging {
         return isTouching
     }
 
-    func startRanging(to deviceID: UUID, token: NIDiscoveryToken) {
+    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken) {
         print("📍 UWB: startRanging() called for \(deviceID.uuidString.prefix(8))")
+        
+        setupSession() // Recreate for next use
         
         let caps = NISession.deviceCapabilities
         print("precise distance:", caps.supportsPreciseDistanceMeasurement)
@@ -165,12 +172,12 @@ class UWBManager: NSObject, UWBManaging {
         }
 
         print("📍 UWB: NISession exists, storing token and creating config...")
-        deviceTokens[deviceID] = token
+        deviceTokens[deviceID] = peerToken
 
         print("📍 UWB: deviceTokens now has \(deviceTokens.count) token(s)")
         print("📍 UWB: nearbyObjects currently has \(nearbyObjects.count) object(s)")
 
-        let config = NINearbyPeerConfiguration(peerToken: token)
+        let config = NINearbyPeerConfiguration(peerToken: peerToken)
         print("📍 UWB: Created NINearbyPeerConfiguration successfully")
 
         session.run(config)
@@ -181,12 +188,8 @@ class UWBManager: NSObject, UWBManaging {
     func stopRanging(to deviceID: UUID) {
         deviceTokens.removeValue(forKey: deviceID)
         nearbyObjects.removeValue(forKey: deviceID)
-
-        // If no more devices, invalidate session
-        if deviceTokens.isEmpty {
-            niSession?.invalidate()
-            setupSession() // Recreate for next use
-        }
+        niSession?.invalidate()
+        niSession = nil
 
         print("📍 UWB: Stopped ranging to \(deviceID.uuidString.prefix(8))")
     }
@@ -255,6 +258,7 @@ extension UWBManager: NISessionDelegate {
                 self.nearbyObjects.removeValue(forKey: deviceID)
                 print("📍 UWB: Lost connection to \(deviceID.uuidString.prefix(8)), reason: \(reason.rawValue)")
             }
+            printDiagnostics()
         }
     }
 
@@ -262,18 +266,31 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("⚠️ UWB: Session invalidated - \(error.localizedDescription)")
             nearbyObjects.removeAll()
+            niSession = nil
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionWasSuspended(_ session: NISession) {
         Task { @MainActor in
             print("⚠️ UWB: Session suspended")
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionSuspensionEnded(_ session: NISession) {
         Task { @MainActor in
             print("✅ UWB: Session resumed")
+            printDiagnostics()
+            self.deviceTokens.forEach { (deviceId: UUID, token: NIDiscoveryToken) in
+                self.startRanging(to: deviceId, peerToken: token)
+            }
+        }
+    }
+    nonisolated func sessionDidStartRunning(_ session: NISession) {
+        Task { @MainActor in
+            print("UWB: Session did start running")
+            printDiagnostics()
         }
     }
 }

@@ -396,14 +396,6 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
         print("✅ BLE Service: Finished discovering characteristics for \(peripheral.identifier.uuidString.prefix(8))")
     }
     
-    func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService])
-    {
-        print("BLE Service: Removing Invalidated services")
-        invalidatedServices.forEach { invalidatedService in
-            peripheralManager.remove(invalidatedService as! CBMutableService)
-        }
-    }
-
     func peripheral(_ peripheral: CBPeripheral,
                    didWriteValueFor characteristic: CBCharacteristic,
                    error: Error?) {
