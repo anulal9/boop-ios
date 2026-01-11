@@ -189,6 +189,7 @@ class UWBManager: NSObject, UWBManaging {
         deviceTokens.removeValue(forKey: deviceID)
         nearbyObjects.removeValue(forKey: deviceID)
         niSession?.invalidate()
+        niSession = nil
 
         print("📍 UWB: Stopped ranging to \(deviceID.uuidString.prefix(8))")
     }
@@ -287,6 +288,7 @@ extension UWBManager: NISessionDelegate {
         }
     }
     
+
     nonisolated func sessionDidStartRunning(_ session: NISession) {
         Task { @MainActor in
             print("UWB: Session did start running")
