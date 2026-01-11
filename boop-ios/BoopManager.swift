@@ -86,14 +86,7 @@ class BoopManager: NSObject, ObservableObject {
         var success = false
         var attempts = 0
         while (!success && attempts < 3) {
-            guard let peripheral = bluetoothManager.connectedPeripherals[deviceId] else {
-                print("⚠️ Boop: Device \(deviceId.uuidString.prefix(8)) not connected, connecting...")
-                bluetoothManager.connect(to: deviceId)
-                // Note: Will need to retry sending after connection establishes
-                attempts += 1
-                continue
-            }
-            success = await sendBluetoothMessage(peripheral: peripheral, deviceId: deviceId, messageType: .boop)
+            success = await sendBluetoothMessage(deviceId: deviceId, messageType: .boop)
             if (success) {
                 return true
             }
@@ -101,7 +94,7 @@ class BoopManager: NSObject, ObservableObject {
         return false
     }
     
-    private func sendBluetoothMessage(peripheral: CBPeripheral, deviceId: UUID,
+    private func sendBluetoothMessage(deviceId: UUID,
                                       messageType: BluetoothMessage.MessageType) async -> Bool {
         do {
             let message = BluetoothMessage(
@@ -110,7 +103,7 @@ class BoopManager: NSObject, ObservableObject {
                 displayName: try await self.displayName.value
             )
             print("Boop: Sending BLE Message")
-            bluetoothManager.sendMessage(message, to: peripheral)
+            bluetoothManager.sendMessage(message, to: deviceId)
             return true
         } catch {
             print("\(error.localizedDescription) occured")
