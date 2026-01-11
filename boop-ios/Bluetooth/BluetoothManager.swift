@@ -58,8 +58,12 @@ class BluetoothManager: NSObject, ObservableObject {
         Task {
             await service.stop()
         }
-        nearbyDevices = [:]
         devicesWithUWBRanging.removeAll()
+        connectedPeripherals.removeAll()
+        discoveredDevices.removeAll()
+        nearbyDevices.removeAll()
+        connectionRequests.removeAll()
+        connectionResponses.removeAll()
     }
 
     func getNearbyDevices() -> [UUID: DevicePositionCategory] {
