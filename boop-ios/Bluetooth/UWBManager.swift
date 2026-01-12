@@ -309,6 +309,7 @@ extension UWBManager: NISessionDelegate {
             }
             guard let peerDeviceID = deviceID(for: peerToken) else {
                 print("UWB: Could not find device id for session token. ")
+                self.startRanging(peerToken: peerToken)
                 return
             }
             self.startRanging(to: peerDeviceID, peerToken: peerToken)
