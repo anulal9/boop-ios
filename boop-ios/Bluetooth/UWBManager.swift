@@ -163,10 +163,8 @@ class UWBManager: NSObject, UWBManaging {
 
         return isTouching
     }
-
-    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken) {
-        print("📍 UWB: startRanging() called for \(deviceID.uuidString.prefix(8))")
-        
+    
+    func startRanging(peerToken: NIDiscoveryToken) {
         setupSession() // Recreate for next use
         
         let caps = NISession.deviceCapabilities
@@ -179,7 +177,6 @@ class UWBManager: NSObject, UWBManaging {
         }
 
         print("📍 UWB: NISession exists, storing token and creating config...")
-        deviceTokens[deviceID] = peerToken
 
         print("📍 UWB: deviceTokens now has \(deviceTokens.count) token(s)")
         print("📍 UWB: nearbyObjects currently has \(nearbyObjects.count) object(s)")
@@ -188,8 +185,14 @@ class UWBManager: NSObject, UWBManaging {
         print("📍 UWB: Created NINearbyPeerConfiguration successfully")
 
         session.run(config)
-        print("✅ UWB: Called session.run() - ranging started to \(deviceID.uuidString.prefix(8))")
+        print("✅ UWB: Called session.run() - ranging started")
         print("📍 UWB: Total devices in ranging: \(deviceTokens.count)")
+    }
+
+    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken) {
+        
+        deviceTokens[deviceID] = peerToken
+        startRanging(peerToken: peerToken)
     }
 
     func stopRanging(to deviceID: UUID) {
