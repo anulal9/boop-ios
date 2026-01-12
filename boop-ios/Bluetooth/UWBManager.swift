@@ -302,17 +302,23 @@ extension UWBManager: NISessionDelegate {
     nonisolated func sessionDidStartRunning(_ session: NISession) {
         Task { @MainActor in
             print("UWB: Session did start running")
+            print("UWB: Session received by delegate callback: \(session)")
+            print("UWB: Session held by this device: \(niSession)")
             printDiagnostics()
-            guard let peerToken = session.discoveryToken else {
-                print("UWB: Could not find peer token for session")
-                return
+            if (niSession == nil) {
+                print("UWB: Setting session for this device")
+                niSession = session
             }
-            guard let peerDeviceID = deviceID(for: peerToken) else {
-                print("UWB: Could not find device id for session token. ")
-                self.startRanging(peerToken: peerToken)
-                return
-            }
-            self.startRanging(to: peerDeviceID, peerToken: peerToken)
+//            guard let peerToken = session.discoveryToken else {
+//                print("UWB: Could not find peer token for session")
+//                return
+//            }
+//            guard let peerDeviceID = deviceID(for: peerToken) else {
+//                print("UWB: Could not find device id for session token. ")
+//                self.startRanging(peerToken: peerToken)
+//                return
+//            }
+//            self.startRanging(to: peerDeviceID, peerToken: peerToken)
         }
     }
 }
