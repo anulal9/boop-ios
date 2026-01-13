@@ -190,8 +190,6 @@ class BluetoothManager: NSObject, ObservableObject {
 extension BluetoothManager: BluetoothServiceDelegate {
     func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral) {
         self.nearbyDevices.removeValue(forKey: deviceID)
-        uwbManager = UWBManager(managerDelegate: self)
-        service.updateUWBToken(uwbDiscoveryToken)
     }
     
     func didReceiveUWBTokenUpdate(for peripheral: CBPeripheral, newToken: NIDiscoveryToken) {
@@ -235,7 +233,6 @@ extension BluetoothManager: BluetoothServiceDelegate {
         connectedPeripherals.removeValue(forKey: deviceID)
         discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
-        uwbManager?.stopRanging(to: deviceID)
         uwbManager = UWBManager(managerDelegate: self)
         service.updateUWBToken(uwbDiscoveryToken)
         
