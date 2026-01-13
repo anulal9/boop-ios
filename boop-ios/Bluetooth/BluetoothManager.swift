@@ -186,6 +186,13 @@ class BluetoothManager: NSObject, ObservableObject {
 
 // MARK: - BluetoothServiceDelegate
 extension BluetoothManager: BluetoothServiceDelegate {
+    func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral) {
+        self.nearbyDevices.removeValue(forKey: deviceID)
+        uwbManager = UWBManager(managerDelegate: self)
+        service.updateUWBToken(uwbDiscoveryToken)
+        self.didConnect(to: deviceID, peripheral: peripheral)
+    }
+    
     func didReceiveUWBTokenUpdate(for peripheral: CBPeripheral, newToken: NIDiscoveryToken) {
         uwbManager?.registerPeerDiscoveryToken(from: peripheral.identifier, token: newToken)
     }

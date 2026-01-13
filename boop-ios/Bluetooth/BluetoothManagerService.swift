@@ -10,6 +10,7 @@ import NearbyInteraction
 // MARK: - Delegate Protocol
 @MainActor
 protocol BluetoothServiceDelegate: AnyObject {
+    func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral)
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber)
     func didRemoveDevice(_ deviceID: UUID)
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral)
@@ -331,6 +332,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
 
 // MARK: - CBPeripheralDelegate
 extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
+    
     func peripheral(_ peripheral: CBPeripheral,
                    didDiscoverServices error: Error?) {
         if let error = error {
@@ -386,6 +388,12 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
         }
 
         print("✅ BLE Service: Finished discovering characteristics for \(peripheral.identifier.uuidString.prefix(8))")
+    }
+    
+    func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
+        Task { @MainActor in
+            delegate?.didInvalidateService(peripheral.identifier, peripheral: peripheral)
+        }
     }
     
     func peripheral(_ peripheral: CBPeripheral,
