@@ -115,6 +115,8 @@ class BluetoothManager: NSObject, ObservableObject {
                 uwbManager?.stopRanging(to: deviceID)
                 devicesWithUWBRanging.remove(deviceID)
                 print("📍 BT Manager: Stopped UWB ranging for: \(deviceID.uuidString.prefix(8))")
+                disconnect(from: deviceID)
+                print("📍 BT Manager: Disconnected from \(deviceID.uuidString.prefix(8))")
             }
         }
 
@@ -190,7 +192,6 @@ extension BluetoothManager: BluetoothServiceDelegate {
         self.nearbyDevices.removeValue(forKey: deviceID)
         uwbManager = UWBManager(managerDelegate: self)
         service.updateUWBToken(uwbDiscoveryToken)
-        self.didConnect(to: deviceID, peripheral: peripheral)
     }
     
     func didReceiveUWBTokenUpdate(for peripheral: CBPeripheral, newToken: NIDiscoveryToken) {
