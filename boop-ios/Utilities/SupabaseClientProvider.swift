@@ -12,8 +12,8 @@ import Supabase
 
 struct SupabaseConfig {
     // TODO: Set your Supabase URL and anon key
-    static let urlString: String = "ASK FOR THIS" // e.g. https://xyzcompany.supabase.co
-    static let anonKey: String = "ASK FOR THIS"
+    static let urlString: String = "https://rhtitjcedoirqidrqvin.supabase.co" // e.g. https://xyzcompany.supabase.co
+    static let anonKey: String = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJodGl0amNlZG9pcnFpZHJxdmluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MDY3MzQsImV4cCI6MjA4MjE4MjczNH0.q0Sta7PNsrJrYT-4-68MKEWQVjLholEJjCm7C6nClvA"
 }
 
 

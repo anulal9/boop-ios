@@ -17,12 +17,15 @@ protocol UWBManaging: AnyObject {
     func isApproximatelyTouching(deviceID: UUID) -> Bool
 
     /// Start UWB ranging session with a peer
-    func startRanging(to deviceID: UUID, token: NIDiscoveryToken)
+    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken)
 
     /// Stop UWB ranging session with a peer
     func stopRanging(to deviceID: UUID)
     
     func setUpDelegate(uwbManagerDelegate: UWBManagerDelegate)
+    
+    /// Add discovery token for this peer
+    func registerPeerDiscoveryToken(from device: UUID, token: NIDiscoveryToken)
 
     /// Get the current discovery token for this device
     var discoveryToken: NIDiscoveryToken? { get }
@@ -77,10 +80,15 @@ class UWBManager: NSObject, UWBManaging {
             print("❌ UWB: NISession is NOT SUPPORTED on this device")
             return
         }
+        
+        guard niSession == nil else {
+            print("UWB: NISession already exists, skipping setup")
+            return
+        }
 
         niSession = NISession()
         niSession?.delegate = self
-
+        
         if let token = niSession?.discoveryToken {
             print("✅ UWB: Session initialized successfully")
             print("📍 UWB: Discovery token available (size: \(try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true).count) bytes)")
@@ -91,6 +99,10 @@ class UWBManager: NSObject, UWBManaging {
     
     func setUpDelegate(uwbManagerDelegate managerDelegate: UWBManagerDelegate) {
         uwbManagerDelegate = managerDelegate
+    }
+    
+    func registerPeerDiscoveryToken(from deviceID: UUID, token discoveryToken: NIDiscoveryToken) {
+        self.deviceTokens[deviceID] = discoveryToken
     }
 
     // MARK: - Public Methods
@@ -151,9 +163,9 @@ class UWBManager: NSObject, UWBManaging {
 
         return isTouching
     }
-
-    func startRanging(to deviceID: UUID, token: NIDiscoveryToken) {
-        print("📍 UWB: startRanging() called for \(deviceID.uuidString.prefix(8))")
+    
+    func startRanging(peerToken: NIDiscoveryToken) {
+        setupSession() // Recreate for next use
         
         let caps = NISession.deviceCapabilities
         print("precise distance:", caps.supportsPreciseDistanceMeasurement)
@@ -165,28 +177,29 @@ class UWBManager: NSObject, UWBManaging {
         }
 
         print("📍 UWB: NISession exists, storing token and creating config...")
-        deviceTokens[deviceID] = token
 
         print("📍 UWB: deviceTokens now has \(deviceTokens.count) token(s)")
         print("📍 UWB: nearbyObjects currently has \(nearbyObjects.count) object(s)")
 
-        let config = NINearbyPeerConfiguration(peerToken: token)
+        let config = NINearbyPeerConfiguration(peerToken: peerToken)
         print("📍 UWB: Created NINearbyPeerConfiguration successfully")
 
         session.run(config)
-        print("✅ UWB: Called session.run() - ranging started to \(deviceID.uuidString.prefix(8))")
+        print("✅ UWB: Called session.run() - ranging started")
         print("📍 UWB: Total devices in ranging: \(deviceTokens.count)")
+    }
+
+    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken) {
+        
+        deviceTokens[deviceID] = peerToken
+        startRanging(peerToken: peerToken)
     }
 
     func stopRanging(to deviceID: UUID) {
         deviceTokens.removeValue(forKey: deviceID)
         nearbyObjects.removeValue(forKey: deviceID)
-
-        // If no more devices, invalidate session
-        if deviceTokens.isEmpty {
-            niSession?.invalidate()
-            setupSession() // Recreate for next use
-        }
+        niSession?.invalidate()
+        niSession = nil
 
         print("📍 UWB: Stopped ranging to \(deviceID.uuidString.prefix(8))")
     }
@@ -255,6 +268,7 @@ extension UWBManager: NISessionDelegate {
                 self.nearbyObjects.removeValue(forKey: deviceID)
                 print("📍 UWB: Lost connection to \(deviceID.uuidString.prefix(8)), reason: \(reason.rawValue)")
             }
+            printDiagnostics()
         }
     }
 
@@ -262,18 +276,49 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("⚠️ UWB: Session invalidated - \(error.localizedDescription)")
             nearbyObjects.removeAll()
+            niSession = nil
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionWasSuspended(_ session: NISession) {
         Task { @MainActor in
             print("⚠️ UWB: Session suspended")
+            printDiagnostics()
         }
     }
 
     nonisolated func sessionSuspensionEnded(_ session: NISession) {
         Task { @MainActor in
             print("✅ UWB: Session resumed")
+            printDiagnostics()
+            self.deviceTokens.forEach { (deviceId: UUID, token: NIDiscoveryToken) in
+                self.startRanging(to: deviceId, peerToken: token)
+            }
+        }
+    }
+    
+
+    nonisolated func sessionDidStartRunning(_ session: NISession) {
+        Task { @MainActor in
+            print("UWB: Session did start running")
+            print("UWB: Session received by delegate callback: \(session)")
+            print("UWB: Session held by this device: \(niSession)")
+            printDiagnostics()
+            if (niSession == nil) {
+                print("UWB: Setting session for this device")
+                niSession = session
+            }
+//            guard let peerToken = session.discoveryToken else {
+//                print("UWB: Could not find peer token for session")
+//                return
+//            }
+//            guard let peerDeviceID = deviceID(for: peerToken) else {
+//                print("UWB: Could not find device id for session token. ")
+//                self.startRanging(peerToken: peerToken)
+//                return
+//            }
+//            self.startRanging(to: peerDeviceID, peerToken: peerToken)
         }
     }
 }
