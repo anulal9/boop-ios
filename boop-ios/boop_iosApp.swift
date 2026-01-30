@@ -13,7 +13,8 @@ struct boop_iosApp: App {
     private var schema: Schema
     private var modelConfiguration: ModelConfiguration
     @State var sharedModelContainer: ModelContainer?
-    
+    @StateObject private var boopManager = BoopManager()
+
     init() {
         self.schema = Schema([
                 Contact.self,
@@ -41,7 +42,9 @@ struct boop_iosApp: App {
         WindowGroup {
             Group {
                 if let container = sharedModelContainer {
-                    RootView().modelContainer(container)
+                    RootView()
+                        .modelContainer(container)
+                        .environmentObject(boopManager)
                 } else {
                     VStack
                     {

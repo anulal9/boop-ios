@@ -1,47 +1,52 @@
 //
-//  BoopView.swift
+//  BoopRangingView.swift
 //  boop-ios
 //
-//  Created by Anu Lal on 11/26/25.
+//  Handles Bluetooth ranging/scanning for new boops
 //
 
 import SwiftUI
 import SwiftData
 
-struct BoopView: View {
-    @StateObject private var boopManager = BoopManager()
+struct BoopRangingView: View {
+    @Binding var isPresented: Bool
+    @EnvironmentObject var boopManager: BoopManager
     @Environment(\.modelContext) private var modelContext
     @Query private var contacts: [Contact]
     @State private var showBoop = false
     @State private var currentBoopDisplayName: String = ""
-    @State private var selectedContact: Contact? = nil
 
     private let animationDuration: TimeInterval = 2
-    
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                Group {
-                    Text("Contacts")
-                        .heading1Style()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }.frame(height: ComponentSize.pageHeaderHeight)
-
+            VStack(spacing: Spacing.xl) {
                 Spacer()
 
-                LazyVStack {
-                    ForEach(contacts) { contact in
-                        Button(action: {
-                            selectedContact = contact
-                        }) {
-                            buildContactCard(contact: contact)
-                        }
-                    }
-                    .onDelete(perform: deleteContact)
+                // Scanning indicator
+                VStack(spacing: Spacing.lg) {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.accentPrimary)
+
+                    Text("Looking for nearby devices...")
+                        .heading2Style()
+                        .multilineTextAlignment(.center)
                 }
-                .scrollContentBackground(Visibility.hidden)
+
+                Spacer()
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pageBackground()
+            .ignoresSafeArea(edges: .horizontal)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        isPresented = false
+                    }
+                    .foregroundColor(.accentPrimary)
+                }
+            }
             .overlay {
                 if showBoop {
                     ZStack {
@@ -57,23 +62,12 @@ struct BoopView: View {
                     }
                 }
             }
-            .sheet(item: $selectedContact) { contact in
-                BoopHistoryView(contact: contact)
-            }
             .animation(.easeInOut(duration: animationDuration), value: showBoop)
             .onChange(of: boopManager.boopsToRender) { oldValue, newValue in
-                // When a new boop arrives, process it
+                // When a new boop arrives, process it and close the view
                 if !newValue.isEmpty && !showBoop {
                     handleNewBoop()
                 }
-            }
-        }
-    }
-        
-    private func deleteContact(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(contacts[index])
             }
         }
     }
@@ -110,34 +104,14 @@ struct BoopView: View {
             // Show modal
             showBoop = true
 
-            // Hide modal after animation duration
+            // Hide modal and dismiss view after animation duration
             DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
                 showBoop = false
+                // Close the ranging view
+                isPresented = false
             }
         } catch {
             print("Error attempting to receive boop: \(error)")
         }
-    }
-}
-
-@ViewBuilder
-func buildContactCard(contact: Contact) -> some View {
-    ContactInteractionCard(contact: contact) {
-        // Optionally handle tap
-    }
-}
-
-struct BoopHistoryView: View {
-    let contact: Contact
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text("Boop History for \(contact.displayName)")
-                .heading1Style()
-            List(contact.interactions) { interaction in
-                BoopInteractionCard(interaction: interaction)
-            }
-        }
-        .padding()
     }
 }

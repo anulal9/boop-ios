@@ -6,7 +6,7 @@ struct MainTabView: View {
     
     var body: some View {
         TabView {
-            BoopView()
+            ContactsView()
                 .tabItem {
                     Label("Contacts", systemImage: "person.2")
                 }

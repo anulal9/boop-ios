@@ -96,7 +96,6 @@ struct PageBackground: ViewModifier {
         content
             .background(
                 Color.backgroundPrimary
-                    .ignoresSafeArea()
             )
     }
 }
