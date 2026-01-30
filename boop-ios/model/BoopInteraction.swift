@@ -5,39 +5,27 @@
 //  Model for Boop interaction data displayed in cards
 //
 
+
 import Foundation
-import SwiftUI
+import SwiftData
 
-struct BoopInteraction: Identifiable {
-    let id = UUID()
-    let title: String
-    let location: String
-    let timestamp: Date
-    let thumbnails: [UIImage]
+@Model
+final class BoopInteraction {
+    let id: UUID
+    var title: String
+    var location: String
+    var timestamp: Date
+    var imageData: [Data] // Use Data for images
 
-    var thumbnailCount: Int {
-        thumbnails.count
+    init(title: String, location: String, timestamp: Date, imageData: [Data] = []) {
+        self.id = UUID()
+        self.title = title
+        self.location = location
+        self.timestamp = timestamp
+        self.imageData = imageData
     }
 
-    // Sample data for preview
-    static let samples: [BoopInteraction] = [
-        BoopInteraction(
-            title: "Hang with Aparna",
-            location: "Stuytown, NYC",
-            timestamp: Date().addingTimeInterval(-86400), // 1 day ago
-            thumbnails: []
-        ),
-        BoopInteraction(
-            title: "Anish, Sarem...",
-            location: "John St, NYC",
-            timestamp: Date().addingTimeInterval(-604800), // 1 week ago
-            thumbnails: []
-        ),
-        BoopInteraction(
-            title: "Anu, Jesse, Sarem",
-            location: "Joyface, NYC",
-            timestamp: Date().addingTimeInterval(-31536000), // 1 year ago
-            thumbnails: []
-        )
-    ]
+    var thumbnailCount: Int {
+        imageData.count
+    }
 }

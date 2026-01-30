@@ -8,7 +8,7 @@ struct MainTabView: View {
         TabView {
             BoopView()
                 .tabItem {
-                    Label("Timeline", systemImage: "clock.fill")
+                    Label("Contacts", systemImage: "person.2")
                 }
 
             ProfileSetupView(

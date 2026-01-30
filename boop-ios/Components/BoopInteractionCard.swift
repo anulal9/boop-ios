@@ -181,6 +181,7 @@ struct BoopInteractionCard: View {
 
 // MARK: - Preview
 
+
 #Preview("Single Thumbnail") {
     VStack(spacing: Spacing.lg) {
         BoopInteractionCard(
@@ -188,13 +189,14 @@ struct BoopInteractionCard: View {
                 title: "Hang with Aparna",
                 location: "Stuytown, NYC",
                 timestamp: Date().addingTimeInterval(-86400), // 1 day ago
-                thumbnails: [UIImage()]
+                imageData: [Data()]
             )
         )
     }
     .padding()
     .background(Color.backgroundPrimary)
 }
+
 
 #Preview("Double Thumbnail") {
     VStack(spacing: Spacing.lg) {
@@ -203,13 +205,14 @@ struct BoopInteractionCard: View {
                 title: "Anish, Sarem...",
                 location: "John St, NYC",
                 timestamp: Date().addingTimeInterval(-604800), // 1 week ago
-                thumbnails: [UIImage(), UIImage()]
+                imageData: [Data(), Data()]
             )
         )
     }
     .padding()
     .background(Color.backgroundPrimary)
 }
+
 
 #Preview("Triple Thumbnail") {
     VStack(spacing: Spacing.lg) {
@@ -218,26 +221,9 @@ struct BoopInteractionCard: View {
                 title: "Anu, Jesse, Sarem",
                 location: "Joyface, NYC",
                 timestamp: Date().addingTimeInterval(-31536000), // 1 year ago
-                thumbnails: [UIImage(), UIImage(), UIImage()]
+                imageData: [Data(), Data(), Data()]
             )
         )
-    }
-    .padding()
-    .background(Color.backgroundPrimary)
-}
-
-#Preview("All Variants") {
-    VStack(spacing: Spacing.lg) {
-        ForEach(0..<3) { index in
-            BoopInteractionCard(
-                interaction: BoopInteraction(
-                    title: BoopInteraction.samples[index].title,
-                    location: BoopInteraction.samples[index].location,
-                    timestamp: BoopInteraction.samples[index].timestamp,
-                    thumbnails: Array(repeating: UIImage(), count: index + 1)
-                )
-            )
-        }
     }
     .padding()
     .background(Color.backgroundPrimary)

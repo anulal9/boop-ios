@@ -16,7 +16,7 @@ struct boop_iosApp: App {
     
     init() {
         self.schema = Schema([
-                Entry.self,
+                Contact.self,
                 UserProfile.self,
             ])
         self.modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)

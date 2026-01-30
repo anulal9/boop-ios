@@ -8,7 +8,26 @@
 import SwiftUI
 
 struct BoopInteractionListView: View {
-    let interactions = BoopInteraction.samples
+    let interactions: [BoopInteraction] = [
+        BoopInteraction(
+            title: "Hang with Aparna",
+            location: "Stuytown, NYC",
+            timestamp: Date().addingTimeInterval(-86400),
+            imageData: [Data()]
+        ),
+        BoopInteraction(
+            title: "Anish, Sarem...",
+            location: "John St, NYC",
+            timestamp: Date().addingTimeInterval(-604800),
+            imageData: [Data(), Data()]
+        ),
+        BoopInteraction(
+            title: "Anu, Jesse, Sarem",
+            location: "Joyface, NYC",
+            timestamp: Date().addingTimeInterval(-31536000),
+            imageData: [Data(), Data(), Data()]
+        )
+    ]
 
     var body: some View {
         ZStack {
@@ -56,14 +75,9 @@ struct BoopInteractionListView: View {
                 // Cards List
                 ScrollView {
                     VStack(spacing: Spacing.xl) {
-                        ForEach(Array(interactions.enumerated()), id: \.element.id) { index, interaction in
+                        ForEach(interactions) { interaction in
                             BoopInteractionCard(
-                                interaction: BoopInteraction(
-                                    title: interaction.title,
-                                    location: interaction.location,
-                                    timestamp: interaction.timestamp,
-                                    thumbnails: Array(repeating: UIImage(), count: index + 1)
-                                ),
+                                interaction: interaction,
                                 onTap: {
                                     print("Tapped: \(interaction.title)")
                                 }
