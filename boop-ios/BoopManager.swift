@@ -21,9 +21,8 @@ class BoopManager: NSObject, ObservableObject {
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
     private lazy var displayName: Task<String, Error> = {
         Task {
-            if let profile = await DataStore.shared.getUserProfile(),
-                 let name = profile.displayName {
-                return name
+            if let profile = await DataStore.shared.getUserProfile() {
+                return profile.displayName
             }
             return ""
         }

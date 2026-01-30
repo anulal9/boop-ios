@@ -3,17 +3,17 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var appleUserID: String
     var firstName: String
     var lastName: String
     var dateOfBirth: Date
     var createdAt: Date
+    var avatarData: Data?
 
-    init(appleUserID: String, firstName: String, lastName: String, dateOfBirth: Date) {
-        self.appleUserID = appleUserID
+    init(firstName: String, lastName: String, dateOfBirth: Date, avatarData: Data? = nil) {
         self.firstName = firstName
         self.lastName = lastName
         self.dateOfBirth = dateOfBirth
+        self.avatarData = avatarData
         self.createdAt = Date()
     }
 

@@ -14,7 +14,8 @@
       "Bash(grep:*)",
       "Bash(plutil:*)",
       "Bash(security find-identity:*)",
-      "Bash(xcrun devicectl:*)"
+      "Bash(xcrun devicectl:*)",
+      "Bash(git -C /Users/aparna/boop-ios status)"
     ],
     "deny": [],
     "ask": []

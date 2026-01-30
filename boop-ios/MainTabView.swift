@@ -12,7 +12,6 @@ struct MainTabView: View {
                 }
 
             ProfileSetupView(
-                authViewModel: nil,
                 isSetupMode: false,
                 onProfileUpdated: {
                     refreshTrigger = UUID()
