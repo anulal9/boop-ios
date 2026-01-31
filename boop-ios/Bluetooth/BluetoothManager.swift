@@ -16,6 +16,18 @@ class BluetoothManager: NSObject, ObservableObject {
     // MARK: - Internal State
     var connectedPeripherals: [UUID: CBPeripheral] = [:]
 
+    /// Local device UUID - persisted across app launches
+    private(set) lazy var localDeviceUUID: UUID = {
+        let key = "com.boop.localDeviceUUID"
+        if let uuidString = UserDefaults.standard.string(forKey: key),
+           let uuid = UUID(uuidString: uuidString) {
+            return uuid
+        }
+        let newUUID = UUID()
+        UserDefaults.standard.set(newUUID.uuidString, forKey: key)
+        return newUUID
+    }()
+
     // MARK: - Dependencies
     private var service: BluetoothManagerServiceImpl!
     private var uwbManager: UWBManaging?
@@ -69,14 +81,31 @@ class BluetoothManager: NSObject, ObservableObject {
         return nearbyDevices
     }
 
+    func getLocalDeviceUUID() -> UUID {
+        return localDeviceUUID
+    }
+
     func sendMessage(_ message: BluetoothMessage, to device: UUID) {
         guard let peripheral = connectedPeripherals[device] else {
-            print("BT Manager: Cannot find peripheral for device")
+            print("❌ BT Manager: Cannot find peripheral for device \(device.uuidString.prefix(8))")
+            print("📊 BT Manager: Connected peripherals: \(connectedPeripherals.keys.map { $0.uuidString.prefix(8) })")
             return
         }
+        print("✅ BT Manager: Found peripheral, sending \(message.messageType) message to \(device.uuidString.prefix(8))")
         Task {
             await service.sendMessage(message, to: peripheral)
         }
+    }
+
+    func sendPresence(to device: UUID, displayName: String) {
+        print("📤 BT Manager: Sending presence to \(device.uuidString.prefix(8))")
+        print("📤 BT Manager: My UUID: \(localDeviceUUID.uuidString.prefix(8)), My displayName: '\(displayName)'")
+        let message = BluetoothMessage(
+            senderUUID: localDeviceUUID,
+            messageType: .presence,
+            displayName: displayName
+        )
+        sendMessage(message, to: device)
     }
 
     func disconnect(from deviceID: UUID) {

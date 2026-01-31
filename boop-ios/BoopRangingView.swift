@@ -18,23 +18,72 @@ struct BoopRangingView: View {
 
     private let animationDuration: TimeInterval = 2
 
+    private var nearbyDevices: [NearbyDevice] {
+        let devices = boopManager.getNearbyDevices()
+        print("🎨 BoopRangingView: Building UI for \(devices.count) nearby device(s)")
+
+        let result = devices.map { (id, distance) in
+            // Check if this device is a saved contact
+            let savedContact = contacts.first(where: { $0.uuid == id })
+
+            // Prefer saved contact name, then transmitted name, then fallback
+            let displayName = savedContact?.displayName
+                ?? boopManager.displayNames[id]
+                ?? "Unknown User"
+
+            print("🎨 BoopRangingView: Device \(id.uuidString.prefix(8))")
+            print("   - Saved contact: \(savedContact?.displayName ?? "nil")")
+            print("   - Transmitted name: \(boopManager.displayNames[id] ?? "nil")")
+            print("   - Final displayName: '\(displayName)'")
+
+            return NearbyDevice(
+                id: id,
+                displayName: displayName,
+                distance: distance,
+                isSelected: boopManager.mySelections.contains(id)
+            )
+        }
+        .sorted { $0.distance.rawValue < $1.distance.rawValue }
+
+        return result
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: Spacing.xl) {
-                Spacer()
+            VStack(spacing: Spacing.lg) {
+                // Header
+                Text("Select a device to Boop")
+                    .heading2Style()
+                    .padding(.top, Spacing.lg)
 
-                // Scanning indicator
-                VStack(spacing: Spacing.lg) {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .tint(.accentPrimary)
+                // Devices list
+                if nearbyDevices.isEmpty {
+                    VStack(spacing: Spacing.lg) {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.accentPrimary)
 
-                    Text("Looking for nearby devices...")
-                        .heading2Style()
-                        .multilineTextAlignment(.center)
+                        Text("Looking for nearby devices...")
+                            .subtitleStyle()
+                        Spacer()
+                    }
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: Spacing.md) {
+                            ForEach(nearbyDevices) { device in
+                                DeviceRow(
+                                    device: device,
+                                    isSelected: boopManager.mySelections.contains(device.id),
+                                    otherSelected: boopManager.theirSelections.contains(device.id)
+                                ) {
+                                    boopManager.selectDevice(device.id)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.md)
+                    }
                 }
-
-                Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pageBackground()
@@ -113,5 +162,55 @@ struct BoopRangingView: View {
         } catch {
             print("Error attempting to receive boop: \(error)")
         }
+    }
+}
+
+// MARK: - Device Row Component
+struct DeviceRow: View {
+    let device: NearbyDevice
+    let isSelected: Bool
+    let otherSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: Spacing.md) {
+                // Distance indicator
+                Text(device.distanceEmoji)
+                    .font(.system(size: 30))
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                    Text(device.displayName)
+                        .heading2Style()
+
+                    HStack(spacing: Spacing.xs) {
+                        Text(device.distanceText)
+                            .subtitleStyle()
+
+                        if otherSelected {
+                            Text("• Wants to boop you!")
+                                .subtitleStyle()
+                                .foregroundColor(.accentPrimary)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                // Selection indicator
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.accentPrimary)
+                        .font(.system(size: 24))
+                } else {
+                    Image(systemName: "circle")
+                        .foregroundColor(.textMuted)
+                        .font(.system(size: 24))
+                }
+            }
+            .padding(Spacing.md)
+            .cardStyle()
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }

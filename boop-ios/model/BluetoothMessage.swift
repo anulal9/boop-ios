@@ -22,6 +22,8 @@ struct BluetoothMessage {
         case connectionReject = 0x03
         case disconnect = 0x05
         case boop = 0x06
+        case boopRequest = 0x07  // User selected this device for booping
+        case presence = 0x08     // Announce display name when connecting
     }
 
     // MARK: - Encoding

@@ -25,7 +25,9 @@ protocol BluetoothServiceDelegate: AnyObject {
 
 @MainActor
 protocol BoopDelegate: AnyObject {
-    func didReceiveBoop(from senderUUID: UUID, displayName: String)
+    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String)
+    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String)
+    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String)
 }
 
 // MARK: - Service Protocol
@@ -204,14 +206,31 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
     }
     
     private func receivedBLERequestFromCentral(request: CBATTRequest) {
+        let peripheralUUID = request.central.identifier
+        print("📥 BLE Service: Received write request from central \(peripheralUUID.uuidString.prefix(8))")
         if let value = request.value,
            let message = BluetoothMessage.decode(value) {
+            print("✅ BLE Service: Successfully decoded message")
+            print("   - Type: \(message.messageType)")
+            print("   - Sender UUID: \(message.senderUUID.uuidString.prefix(8))")
+            print("   - Peripheral UUID: \(peripheralUUID.uuidString.prefix(8))")
+            print("   - Display Name: '\(message.displayName)'")
+
             // Handle message via delegate
             Task { @MainActor in
                 switch message.messageType {
                 case .boop:
+                    print("🎉 BLE Service: Routing boop message to delegate")
                     self.boopDelegate?
-                        .didReceiveBoop(from: message.senderUUID, displayName: message.displayName)
+                        .didReceiveBoop(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName)
+                case .boopRequest:
+                    print("📨 BLE Service: Routing boop request to delegate")
+                    self.boopDelegate?
+                        .didReceiveBoopRequest(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName)
+                case .presence:
+                    print("👋 BLE Service: Routing presence message to delegate")
+                    self.boopDelegate?
+                        .didReceivePresence(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName)
                 case .connectionRequest:
                     self.delegate?.didReceiveConnectionRequest(from: message.senderUUID)
                 case .connectionAccept:
@@ -224,7 +243,10 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
             }
             peripheralManager.respond(to: request, withResult: .success)
         } else {
-            print("⚠️ Failed to decode message")
+            print("⚠️ BLE Service: Failed to decode message from \(peripheralUUID.uuidString.prefix(8))")
+            if let value = request.value {
+                print("⚠️ BLE Service: Message data length: \(value.count) bytes")
+            }
             peripheralManager.respond(to: request, withResult: .unlikelyError)
         }
     }

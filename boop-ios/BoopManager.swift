@@ -14,6 +14,18 @@ class BoopManager: NSObject, ObservableObject {
     @Published var boopQueue = Set<UUID>()
     @Published var boopsToRender: [Boop] = []
 
+    /// Track which devices I've selected
+    @Published var mySelections = Set<UUID>()
+
+    /// Track which devices have selected me
+    @Published var theirSelections = Set<UUID>()
+
+    /// Track display names for discovered devices (keyed by sender's local UUID)
+    @Published var displayNames: [UUID: String] = [:]
+
+    /// Map peripheral UUIDs to sender's local UUIDs
+    private var peripheralToSenderUUID: [UUID: UUID] = [:]
+
     // MARK: - Private Properties
     private let bluetoothManager: BluetoothManager
     private var cancellables = Set<AnyCancellable>()
@@ -39,36 +51,83 @@ class BoopManager: NSObject, ObservableObject {
     
     // MARK: - Setup
     private func setupObservers() {
-        // Observe nearbyDevices changes and update boop queue
+        // Track previous devices to detect new ones
+        var previousDevices = Set<UUID>()
+
+        // Observe nearbyDevices changes to clean up selections when devices disappear
         bluetoothManager.$nearbyDevices
-            .sink { [weak self] _ in
+            .sink { [weak self] devices in
                 guard let self = self else { return }
-                self.boopTouchingDevices()
+                let deviceIDs = Set(devices.keys)
+
+                print("📊 BoopManager: nearbyDevices updated - count: \(deviceIDs.count)")
+                print("📊 BoopManager: Device IDs: \(deviceIDs.map { $0.uuidString.prefix(8) })")
+
+                // Detect new devices and send presence
+                let newDevices = deviceIDs.subtracting(previousDevices)
+                if !newDevices.isEmpty {
+                    print("🆕 BoopManager: Detected \(newDevices.count) new device(s)")
+                }
+                for deviceID in newDevices {
+                    Task {
+                        if let displayName = try? await self.displayName.value {
+                            print("👋 BoopManager: Sending presence to \(deviceID.uuidString.prefix(8)) with name '\(displayName)'")
+                            self.bluetoothManager.sendPresence(to: deviceID, displayName: displayName)
+                        } else {
+                            print("⚠️ BoopManager: Could not get display name for presence")
+                        }
+                    }
+                }
+
+                // Clean up selections for devices that are no longer nearby
+                self.mySelections = self.mySelections.intersection(deviceIDs)
+                self.theirSelections = self.theirSelections.intersection(deviceIDs)
+                self.displayNames = self.displayNames.filter { deviceIDs.contains($0.key) }
+
+                print("📊 BoopManager: Current displayNames: \(self.displayNames.mapValues { $0 })")
+
+                previousDevices = deviceIDs
             }
             .store(in: &cancellables)
     }
 
-    /// Updates the boop queue by filtering nearby devices for touching distance (sync version)
-    private func boopTouchingDevices() {
-        print("🔄 Boop: Checking for devices in touching range...")
-        
-        let touchingDevices = Set(
-            bluetoothManager.nearbyDevices.filter
-            { key, value in value == DevicePositionCategory.ApproxTouching }.keys)
-    
+    // MARK: - Public Methods
+
+    /// Get nearby devices with their display info
+    func getNearbyDevices() -> [UUID: DevicePositionCategory] {
+        return bluetoothManager.nearbyDevices
+    }
+
+    /// User selected a device to boop
+    func selectDevice(_ deviceID: UUID) {
+        guard bluetoothManager.nearbyDevices[deviceID] != nil else {
+            print("⚠️ BoopManager: Cannot select device \(deviceID) - not nearby")
+            return
+        }
+
+        print("👆 BoopManager: User selected device \(deviceID)")
+        mySelections.insert(deviceID)
+
+        // Send boop request to the selected device
         Task {
-            let devicesToAdd = touchingDevices.subtracting(boopQueue)
-            for device in devicesToAdd {
-                print("🔄 Boop: Adding device \(device) to boopQueue")
-                do {
-                    let didBoop = try await boopDevice(deviceId: device)
-                    if (!didBoop) {
-                        print("🔄 Boop: failed boop after 3 retries for device \(device)")
-                    }
-                } catch {
-                    print("🔄 Boop: received error while booping device \(device)")
-                }
+            _ = await sendBluetoothMessage(deviceId: deviceID, messageType: .boopRequest)
+        }
+
+        // Check if this creates a mutual selection
+        checkForMutualSelection(with: deviceID)
+    }
+
+    /// Check if both users have selected each other
+    private func checkForMutualSelection(with deviceID: UUID) {
+        if mySelections.contains(deviceID) && theirSelections.contains(deviceID) {
+            print("🎉 BoopManager: Mutual selection detected with \(deviceID)!")
+            // Trigger the boop
+            Task {
+                _ = await sendBluetoothMessage(deviceId: deviceID, messageType: .boop)
             }
+            // Clear selections after successful boop
+            mySelections.remove(deviceID)
+            theirSelections.remove(deviceID)
         }
     }
     
@@ -97,7 +156,7 @@ class BoopManager: NSObject, ObservableObject {
                                       messageType: BluetoothMessage.MessageType) async -> Bool {
         do {
             let message = BluetoothMessage(
-                senderUUID: deviceId,
+                senderUUID: bluetoothManager.getLocalDeviceUUID(),
                 messageType: messageType,
                 displayName: try await self.displayName.value
             )
@@ -111,8 +170,43 @@ class BoopManager: NSObject, ObservableObject {
     }
 }
 extension BoopManager: BoopDelegate {
-    func didReceiveBoop(from senderUUID: UUID, displayName: String) {
-        print("Boop: Received boop from \(displayName)")
+    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+        print("🎉 BoopManager: Received boop from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
+
+        // Store mapping and display name
+        peripheralToSenderUUID[peripheralUUID] = senderUUID
+        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
+
+        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
+        print("📊 BoopManager: Total stored names: \(displayNames.count)")
         boopsToRender.append(Boop(senderUUID: senderUUID, displayName: displayName))
+    }
+
+    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+        print("📨 BoopManager: Received boop request from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
+
+        // Store mapping and display name
+        peripheralToSenderUUID[peripheralUUID] = senderUUID
+        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
+
+        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
+        print("📊 BoopManager: Total stored names: \(displayNames.count)")
+        theirSelections.insert(peripheralUUID)
+
+        // Check if this creates a mutual selection
+        checkForMutualSelection(with: peripheralUUID)
+    }
+
+    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+        print("👋 BoopManager: Received presence from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
+
+        // Store mapping and display name
+        peripheralToSenderUUID[peripheralUUID] = senderUUID
+        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
+
+        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
+        print("🔗 BoopManager: Mapped peripheral \(peripheralUUID.uuidString.prefix(8)) → sender \(senderUUID.uuidString.prefix(8))")
+        print("📊 BoopManager: Total stored names: \(displayNames.count)")
+        print("📊 BoopManager: All stored names: \(displayNames)")
     }
 }
