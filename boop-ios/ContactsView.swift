@@ -17,14 +17,6 @@ struct ContactsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                Group {
-                    Text("Contacts")
-                        .heading1Style()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }.frame(height: ComponentSize.pageHeaderHeight)
-
-                Spacer()
-
                 LazyVStack {
                     ForEach(contacts) { contact in
                         Button(action: {
@@ -39,6 +31,10 @@ struct ContactsView: View {
             }
             .pageBackground()
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Contacts")
+                        .heading1Style()
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showBoopRanging = true

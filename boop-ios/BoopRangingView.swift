@@ -51,11 +51,6 @@ struct BoopRangingView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: Spacing.lg) {
-                // Header
-                Text("Select a device to Boop")
-                    .heading2Style()
-                    .padding(.top, Spacing.lg)
-
                 // Devices list
                 if nearbyDevices.isEmpty {
                     VStack(spacing: Spacing.lg) {
@@ -89,11 +84,18 @@ struct BoopRangingView: View {
             .pageBackground()
             .ignoresSafeArea(edges: .horizontal)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
+                ToolbarItem(placement: .principal) {
+                    Text("Select a User")
+                        .heading1Style()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
                         isPresented = false
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: IconSize.standard, weight: .semibold))
+                            .foregroundColor(.accentPrimary)
                     }
-                    .foregroundColor(.accentPrimary)
                 }
             }
             .overlay {
