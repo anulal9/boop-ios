@@ -3,32 +3,17 @@ import SwiftData
 
 @Model
 final class UserProfile {
-    var firstName: String
-    var lastName: String
-    var dateOfBirth: Date
+    var name: String
     var createdAt: Date
     var avatarData: Data?
 
-    init(firstName: String, lastName: String, dateOfBirth: Date, avatarData: Data? = nil) {
-        self.firstName = firstName
-        self.lastName = lastName
-        self.dateOfBirth = dateOfBirth
+    init(name: String, avatarData: Data? = nil) {
+        self.name = name
         self.avatarData = avatarData
         self.createdAt = Date()
     }
 
     var displayName: String {
-        "\(firstName) \(lastName)"
-    }
-
-    var age: Int {
-        let calendar = Calendar.current
-        let birthComponents = calendar.dateComponents([.year], from: dateOfBirth)
-        let todayComponents = calendar.dateComponents([.year], from: Date())
-        return (todayComponents.year ?? 0) - (birthComponents.year ?? 0)
-    }
-
-    var isAdult: Bool {
-        age >= 18
+        "\(name)"
     }
 }

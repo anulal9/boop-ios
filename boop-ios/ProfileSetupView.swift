@@ -5,34 +5,17 @@ struct ProfileSetupView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
 
-    @State private var firstName = ""
-    @State private var lastName = ""
-    @State private var dateOfBirth = Date()
-    @State private var errorMessage: String?
+    @State private var name = ""
     @State private var isLoading = false
 
-    // Photo picker state
     @State private var imageSelection: PhotosPickerItem?
     @State private var avatarImage: AvatarImage?
 
-    // Mode control
     let isSetupMode: Bool
     let onProfileUpdated: (() -> Void)?
 
-    var age: Int {
-        let calendar = Calendar.current
-        let birthComponents = calendar.dateComponents([.year], from: dateOfBirth)
-        let todayComponents = calendar.dateComponents([.year], from: Date())
-        return (todayComponents.year ?? 0) - (birthComponents.year ?? 0)
-    }
-
-    var isAdult: Bool {
-        age >= 18
-    }
-
     var canSubmit: Bool {
-        !firstName.isEmptyAfterSanitizing
-            && !lastName.isEmptyAfterSanitizing
+        !name.isEmptyAfterSanitizing
     }
 
     var body: some View {
@@ -45,58 +28,25 @@ struct ProfileSetupView: View {
                             .subtitleStyle()
                     }
                 } else {
-                    Form {
-                        Section(header: Text("Profile Photo")) {
-                            HStack {
-                                Group {
-                                    if let avatarImage {
-                                        avatarImage.image
-                                            .resizable()
-                                            .scaledToFill()
-                                    } else {
-                                        Image(systemName: "person.circle.fill")
-                                            .resizable()
-                                            .foregroundColor(.gray)
-                                    }
-                                }
-                                .frame(width: 80, height: 80)
-                                .clipShape(Circle())
-
-                                Spacer()
-
-                                PhotosPicker(selection: $imageSelection, matching: .images) {
-                                    Label("Select Photo", systemImage: "photo")
-                                }
-                            }
-                        }
-
-                        Section(header: Text("Profile Information")) {
-                            TextField("First Name", text: $firstName)
-                            TextField("Last Name", text: $lastName)
-                        }
-
-                        if isSetupMode {
-                            Section(header: Text("Date of Birth")) {
-                                DatePicker(
-                                    "Select date",
-                                    selection: $dateOfBirth,
-                                    displayedComponents: [.date]
-                                )
-                            }
-                        } else {
-                            Section(header: Text("Date of Birth")) {
-                                Text(formattedDate(dateOfBirth) ?? "Unknown")
-                            }
-                        }
-
-                        if let errorMessage = errorMessage {
+                    VStack(spacing: 0) {
+                        Form {
                             Section {
-                                Text(errorMessage)
-                                    .errorTextStyle()
+                                ProfilePhotoSelector(
+                                    imageSelection: $imageSelection,
+                                    avatarImage: avatarImage
+                                )
+                                .frame(maxWidth: .infinity)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets())
+                            }
+
+                            Section {
+                                StyledTextField(placeholder: "Name", text: $name)
                             }
                         }
+                        .scrollContentBackground(.hidden)
 
-                        Section {
+                        if canSubmit {
                             Button(action: saveProfile) {
                                 if isLoading {
                                     ProgressView()
@@ -104,12 +54,15 @@ struct ProfileSetupView: View {
                                     Text(isSetupMode ? "Continue" : "Save")
                                 }
                             }
-                            .disabled(!canSubmit || isLoading)
+                            .disabled(isLoading)
+                            .frame(maxWidth: .infinity)
+                            .padding()
                         }
                     }
+                    .pageBackground()
+
                 }
             }
-            .navigationTitle(isSetupMode ? "Your Profile" : "You")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: imageSelection) { _, newValue in
                 guard let newValue else { return }
@@ -153,17 +106,12 @@ struct ProfileSetupView: View {
     private func saveProfileSetup() {
         Task {
             isLoading = true
-            errorMessage = nil
 
-            // Create local profile
             let profile = UserProfile(
-                firstName: firstName.sanitize(),
-                lastName: lastName.sanitize(),
-                dateOfBirth: dateOfBirth,
+                name: name.sanitize(),
                 avatarData: avatarImage?.data
             )
 
-            // Save locally
             modelContext.insert(profile)
 
             await DataStore.shared.setUserProfile(profile)
@@ -178,25 +126,17 @@ struct ProfileSetupView: View {
 
     private func saveProfileEdit() {
         isLoading = true
-        errorMessage = nil
 
         Task {
-            // Create updated profile
             let profile = UserProfile(
-                firstName: firstName.sanitize(),
-                lastName: lastName.sanitize(),
-                dateOfBirth: dateOfBirth,
+                name: name.sanitize(),
                 avatarData: avatarImage?.data
             )
 
-            // Save to local storage
             await DataStore.shared.setUserProfile(profile)
-
-            // Update SwiftData
             modelContext.insert(profile)
 
             await MainActor.run {
-                errorMessage = nil
                 isLoading = false
                 onProfileUpdated?()
                 dismiss()
@@ -219,9 +159,7 @@ struct ProfileSetupView: View {
             }
 
             await MainActor.run {
-                self.firstName = profileData.firstName
-                self.lastName = profileData.lastName
-                self.dateOfBirth = profileData.birthDate
+                self.name = profileData.name
                 self.isLoading = false
                 print("✅ [Profile] Profile state updated")
             }

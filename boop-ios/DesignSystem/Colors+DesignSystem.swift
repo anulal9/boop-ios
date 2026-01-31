@@ -12,6 +12,9 @@ extension Color {
     static let backgroundPrimary = Color(hex: "#130914")
     static let backgroundSecondary = Color(hex: "#1d0f22")
 
+    // MARK: - Form Colors
+    static let formBackgroundInactive = Color(hex: "#342d39")
+
     // MARK: - Text Colors
     static let textPrimary = Color(hex: "#ffffff")
     static let textSecondary = Color(hex: "#f4d9f2")

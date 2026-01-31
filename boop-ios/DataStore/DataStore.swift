@@ -22,15 +22,10 @@ actor DataStore {
         try? await StorageCoordinator.shared.waitForInitialization()
 
         // Pre-load user profile data into cache
-        if let firstName = UserDefaults.standard.string(forKey: UserDefaultsKeys.firstName) {
-            cache[UserDefaultsKeys.firstName] = firstName
+        if let name = UserDefaults.standard.string(forKey: UserDefaultsKeys.name) {
+            cache[UserDefaultsKeys.name] = name
         }
-        if let lastName = UserDefaults.standard.string(forKey: UserDefaultsKeys.lastName) {
-            cache[UserDefaultsKeys.lastName] = lastName
-        }
-        if let birthDate = UserDefaults.standard.object(forKey: UserDefaultsKeys.birthDate) as? Date {
-            cache[UserDefaultsKeys.birthDate] = birthDate
-        }
+
         if let avatarData = UserDefaults.standard.data(forKey: UserDefaultsKeys.avatarData) {
             cache[UserDefaultsKeys.avatarData] = avatarData
         }
@@ -42,28 +37,12 @@ actor DataStore {
 
     // MARK: - User Profile Accessors
 
-    /// Returns the user's first name if available
-    func getFirstName() async -> String? {
-        if let cached = cache[UserDefaultsKeys.firstName] as? String {
+    /// Returns the user's name if available
+    func getName() async -> String? {
+        if let cached = cache[UserDefaultsKeys.name] as? String {
             return cached
         }
-        return UserDefaults.standard.string(forKey: UserDefaultsKeys.firstName)
-    }
-
-    /// Returns the user's last name if available
-    func getLastName() async -> String? {
-        if let cached = cache[UserDefaultsKeys.lastName] as? String {
-            return cached
-        }
-        return UserDefaults.standard.string(forKey: UserDefaultsKeys.lastName)
-    }
-
-    /// Returns the user's birth date if available
-    func getBirthDate() async -> Date? {
-        if let cached = cache[UserDefaultsKeys.birthDate] as? Date {
-            return cached
-        }
-        return UserDefaults.standard.object(forKey: UserDefaultsKeys.birthDate) as? Date
+        return UserDefaults.standard.string(forKey: UserDefaultsKeys.name)
     }
 
     /// Returns the user's avatar data if available
@@ -89,18 +68,14 @@ actor DataStore {
     func getUserProfile() async -> UserProfileData? {
         print("Get UserProfile called")
 
-        guard let firstName = await getFirstName(),
-              let lastName = await getLastName(),
-              let birthDate = await getBirthDate() else {
+        guard let name = await getName() else {
             print("No profile found")
             return nil
         }
 
         let avatarData = await getAvatarData()
         let userProfileData = UserProfileData(
-            firstName: firstName,
-            lastName: lastName,
-            birthDate: birthDate,
+            name: name,
             avatarData: avatarData
         )
         print("Constructed user profile data. Display Name: \(userProfileData.displayName)")
@@ -111,17 +86,13 @@ actor DataStore {
     /// Updates both cache and UserDefaults
     func setUserProfile(_ profile: UserProfile) async {
         // Update UserDefaults
-        UserDefaults.standard.set(profile.firstName, forKey: UserDefaultsKeys.firstName)
-        UserDefaults.standard.set(profile.lastName, forKey: UserDefaultsKeys.lastName)
-        UserDefaults.standard.set(profile.dateOfBirth, forKey: UserDefaultsKeys.birthDate)
+        UserDefaults.standard.set(profile.name, forKey: UserDefaultsKeys.name)
         if let avatarData = profile.avatarData {
             UserDefaults.standard.set(avatarData, forKey: UserDefaultsKeys.avatarData)
         }
 
         // Update cache
-        cache[UserDefaultsKeys.firstName] = profile.firstName
-        cache[UserDefaultsKeys.lastName] = profile.lastName
-        cache[UserDefaultsKeys.birthDate] = profile.dateOfBirth
+        cache[UserDefaultsKeys.name] = profile.name
         if let avatarData = profile.avatarData {
             cache[UserDefaultsKeys.avatarData] = avatarData
         }
@@ -155,9 +126,7 @@ actor DataStore {
         cache.removeAll()
 
         // Clear UserDefaults
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.firstName)
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.lastName)
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.birthDate)
+        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.name)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.avatarData)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.profileComplete)
 
@@ -170,20 +139,10 @@ actor DataStore {
 /// Simple data structure representing user profile data from the store
 /// Use this when you need to read multiple profile fields at once
 struct UserProfileData {
-    let firstName: String
-    let lastName: String
-    let birthDate: Date
+    let name: String
     let avatarData: Data?
 
     var displayName: String {
-        "\(firstName) \(lastName)"
-    }
-
-    var isAdult: Bool {
-        let calendar = Calendar.current
-        let birthComponents = calendar.dateComponents([.year], from: birthDate)
-        let todayComponents = calendar.dateComponents([.year], from: Date())
-        let age = (todayComponents.year ?? 0) - (birthComponents.year ?? 0)
-        return age >= 18
+        "\(name)"
     }
 }
