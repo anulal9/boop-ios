@@ -141,6 +141,7 @@ class BoopManager: NSObject, ObservableObject {
             if (success) {
                 return true
             }
+            attempts += 1
         }
         return false
     }

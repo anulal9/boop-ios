@@ -11,7 +11,7 @@ import SwiftData
 
 @Model
 final class Contact {
-    let uuid: UUID
+    var uuid: UUID
     var displayName: String
 
     // Relationship with cascade delete - when Contact is deleted, its interactions are too

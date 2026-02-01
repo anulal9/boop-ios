@@ -19,50 +19,27 @@ struct BoopTimelineView: View {
 
     private let animationDuration: TimeInterval = 2
 
-    // Time bucket key for grouping - uses timestamp rounded to appropriate granularity
-    struct TimeBucket: Hashable {
-        let timestamp: Date
-        let displayText: String
-        let sortOrder: Date  // For sorting sections
+    // Relative date formatter with controlled granularity
+    private let relativeDateFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter
+    }()
 
-        init(for date: Date) {
-            let calendar = Calendar.current
-            let now = Date()
-            let components = calendar.dateComponents([.day], from: date, to: now)
-            let daysAgo = components.day ?? 0
+    // Calculate header text for a given timestamp (relative to current time)
+    private func headerText(for date: Date) -> String {
+        let headerText = relativeDateFormatter.localizedString(for: date, relativeTo: Date())
 
-            // Determine granularity based on age
-            if daysAgo <= 7 {
-                // Recent: daily buckets
-                self.timestamp = calendar.startOfDay(for: date)
-                self.sortOrder = self.timestamp
-            } else if daysAgo <= 30 {
-                // Mid-range: weekly buckets
-                let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date))!
-                self.timestamp = weekStart
-                self.sortOrder = weekStart
-            } else {
-                // Older: monthly buckets
-                let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: date))!
-                self.timestamp = monthStart
-                self.sortOrder = monthStart
-            }
+        // Sanitize and check for granular time units
+        let sanitized = headerText.trimmingCharacters(in: .whitespaces).lowercased()
+        let words = sanitized.components(separatedBy: .whitespaces)
 
-            // Use Swift's built-in relative date formatter
-            self.displayText = self.timestamp.formatted(.relative(presentation: .named))
-                .capitalized  // "yesterday" -> "Yesterday"
-        }
-    }
-
-    // Group interactions by time bucket
-    private var groupedInteractions: [(bucket: TimeBucket, interactions: [BoopInteraction])] {
-        let grouped = Dictionary(grouping: allInteractions) { interaction in
-            TimeBucket(for: interaction.timestamp)
+        // If it contains minutes or hours, group under "Today"
+        if words.contains(where: { $0.contains("minute") || $0.contains("hour") }) {
+            return "Today"
         }
 
-        // Sort by most recent first
-        return grouped.map { ($0.key, $0.value) }
-            .sorted { $0.bucket.sortOrder > $1.bucket.sortOrder }
+        return headerText.capitalized
     }
 
     var body: some View {
@@ -77,21 +54,23 @@ struct BoopTimelineView: View {
                 Spacer()
 
                 LazyVStack(spacing: 0) {
-                    ForEach(groupedInteractions, id: \.bucket) { group in
-                        // Section header
-                        Text(group.bucket.displayText)
-                            .heading1Style()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, Spacing.lg)
-                            .padding(.vertical, Spacing.md)
+                    ForEach(Array(allInteractions.enumerated()), id: \.element.id) { index, interaction in
+                        // Show header if this is the first item or the header changed from previous
+                        let currentHeader = headerText(for: interaction.timestamp)
+                        let previousHeader = index > 0 ? headerText(for: allInteractions[index - 1].timestamp) : nil
 
-                        // Interactions for this time bucket
-                        ForEach(group.interactions) { interaction in
-                            NavigationLink {
-                                Text(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                            } label: {
-                                BoopInteractionCard(interaction: interaction)
-                            }
+                        if previousHeader != currentHeader {
+                            Text(currentHeader)
+                                .heading1Style()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.vertical, Spacing.md)
+                        }
+
+                        NavigationLink {
+                            Text(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+                        } label: {
+                            BoopInteractionCard(interaction: interaction)
                         }
                     }
                 }
@@ -114,7 +93,7 @@ struct BoopTimelineView: View {
                 }
             }
             .animation(.easeInOut(duration: animationDuration), value: showBoop)
-            .onChange(of: boopManager.latestBoopEvent) { oldValue, newValue in
+            .onChange(of: boopManager.latestBoopEvent) { _, newValue in
                 // Only show animation if Timeline is the active tab
                 guard let event = newValue, !showBoop else { return }
                 handleNewBoop(event: event)
