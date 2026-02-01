@@ -5,6 +5,15 @@ struct StyledTextField: View {
     @Binding var text: String
     @FocusState private var isFocused: Bool
 
+    // Text field specific gradient styling
+    private let gradientColors: [Color] = [
+        .purple.opacity(0.6), .blue.opacity(0.6), .cyan.opacity(0.6),
+        .pink.opacity(0.6), .indigo.opacity(0.7), .teal.opacity(0.6),
+        .purple.opacity(0.6), .blue.opacity(0.6), .cyan.opacity(0.6)
+    ]
+    private let gradientAnimationStyle: AnimatedMeshGradient.AnimationStyle = .verticalWave
+    private let gradientDuration: Double = 3.0
+
     var body: some View {
         ZStack(alignment: .center) {
             // Background layer with fixed shape
@@ -17,8 +26,12 @@ struct StyledTextField: View {
                     .fill(Color.clear)
                     .frame(height: 44)
                     .background(
-                        AnimatedTextFieldMeshGradient()
-                            .clipShape(RoundedRectangle(cornerRadius: 22))
+                        AnimatedMeshGradient(
+                            colors: gradientColors,
+                            animationStyle: gradientAnimationStyle,
+                            duration: gradientDuration
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
                     )
             }
 

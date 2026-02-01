@@ -5,9 +5,13 @@ struct ProfilePhotoSelector: View {
     @Binding var imageSelection: PhotosPickerItem?
     let avatarImage: AvatarImage?
 
-    @State private var animationProgress: Float = 0.0
-
     private let size: CGFloat = 280
+
+    private let profileGradientColors: [Color] = [
+        .purple, .blue, .purple,
+        .blue, .purple, .blue,
+        .purple, .blue, .purple
+    ]
 
     var body: some View {
         PhotosPicker(selection: $imageSelection, matching: .images) {
@@ -18,19 +22,10 @@ struct ProfilePhotoSelector: View {
                         .scaledToFill()
                 } else {
                     ZStack(alignment: .center) {
-                        MeshGradient(
-                            width: 3,
-                            height: 3,
-                            points: [
-                                [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
-                                [0.0, 0.5], [animationProgress, 0.5], [1.0, 0.5],
-                                [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
-                            ],
-                            colors: [
-                                .purple, .blue, .purple,
-                                .blue, .purple, .blue,
-                                .purple, .blue, .purple
-                            ]
+                        AnimatedMeshGradient(
+                            colors: profileGradientColors,
+                            animationStyle: .horizontalWave,
+                            duration: 3.0
                         )
 
                         Image(systemName: "person.circle.fill")
@@ -58,10 +53,5 @@ struct ProfilePhotoSelector: View {
             }
         }
         .buttonStyle(.plain)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
-                animationProgress = 1.0
-            }
-        }
     }
 }
