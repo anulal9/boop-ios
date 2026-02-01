@@ -7,4 +7,5 @@ struct UserDefaultsKeys {
     // MARK: - User Profile
     static let name = "boopName"
     static let avatarData = "boopAvatarData"
+    static let birthday = "boopBirthday"
 }

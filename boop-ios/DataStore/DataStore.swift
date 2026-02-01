@@ -30,6 +30,10 @@ actor DataStore {
             cache[UserDefaultsKeys.avatarData] = avatarData
         }
 
+        if let birthday = UserDefaults.standard.object(forKey: UserDefaultsKeys.birthday) as? Date {
+            cache[UserDefaultsKeys.birthday] = birthday
+        }
+
         cache[UserDefaultsKeys.profileComplete] = UserDefaults.standard.bool(forKey: UserDefaultsKeys.profileComplete)
 
         isWarmedUp = true
@@ -53,6 +57,14 @@ actor DataStore {
         return UserDefaults.standard.data(forKey: UserDefaultsKeys.avatarData)
     }
 
+    /// Returns the user's birthday if available
+    func getBirthday() async -> Date? {
+        if let cached = cache[UserDefaultsKeys.birthday] as? Date {
+            return cached
+        }
+        return UserDefaults.standard.object(forKey: UserDefaultsKeys.birthday) as? Date
+    }
+
     /// Returns whether the user's profile setup is complete
     func isProfileComplete() async -> Bool {
         if let cached = cache[UserDefaultsKeys.profileComplete] as? Bool {
@@ -74,9 +86,11 @@ actor DataStore {
         }
 
         let avatarData = await getAvatarData()
+        let birthday = await getBirthday()
         let userProfileData = UserProfileData(
             name: name,
-            avatarData: avatarData
+            avatarData: avatarData,
+            birthday: birthday
         )
         print("Constructed user profile data. Display Name: \(userProfileData.displayName)")
         return userProfileData
@@ -90,11 +104,17 @@ actor DataStore {
         if let avatarData = profile.avatarData {
             UserDefaults.standard.set(avatarData, forKey: UserDefaultsKeys.avatarData)
         }
+        if let birthday = profile.birthday {
+            UserDefaults.standard.set(birthday, forKey: UserDefaultsKeys.birthday)
+        }
 
         // Update cache
         cache[UserDefaultsKeys.name] = profile.name
         if let avatarData = profile.avatarData {
             cache[UserDefaultsKeys.avatarData] = avatarData
+        }
+        if let birthday = profile.birthday {
+            cache[UserDefaultsKeys.birthday] = birthday
         }
     }
 
@@ -128,6 +148,7 @@ actor DataStore {
         // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.name)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.avatarData)
+        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.birthday)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.profileComplete)
 
         isWarmedUp = false
@@ -141,6 +162,7 @@ actor DataStore {
 struct UserProfileData {
     let name: String
     let avatarData: Data?
+    let birthday: Date?
 
     var displayName: String {
         "\(name)"

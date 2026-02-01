@@ -6,6 +6,7 @@ struct ProfileSetupView: View {
     @Environment(\.dismiss) var dismiss
 
     @State private var name = ""
+    @State private var birthday: Date?
     @State private var isLoading = false
 
     @State private var imageSelection: PhotosPickerItem?
@@ -42,6 +43,12 @@ struct ProfileSetupView: View {
 
                             Section {
                                 StyledTextField(placeholder: "Name", text: $name)
+                                DatePickerField(
+                                    title: "Set birthday",
+                                    placeholder: "Add birthday",
+                                    info: "Your birth year is kept private",
+                                    selectedDate: $birthday
+                                )
                             }
                         }
                         .scrollContentBackground(.hidden)
@@ -109,7 +116,8 @@ struct ProfileSetupView: View {
 
             let profile = UserProfile(
                 name: name.sanitize(),
-                avatarData: avatarImage?.data
+                avatarData: avatarImage?.data,
+                birthday: birthday
             )
 
             modelContext.insert(profile)
@@ -130,7 +138,8 @@ struct ProfileSetupView: View {
         Task {
             let profile = UserProfile(
                 name: name.sanitize(),
-                avatarData: avatarImage?.data
+                avatarData: avatarImage?.data,
+                birthday: birthday
             )
 
             await DataStore.shared.setUserProfile(profile)
@@ -160,6 +169,7 @@ struct ProfileSetupView: View {
 
             await MainActor.run {
                 self.name = profileData.name
+                self.birthday = profileData.birthday
                 self.isLoading = false
                 print("✅ [Profile] Profile state updated")
             }
