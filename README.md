@@ -212,12 +212,28 @@ Used for lightweight data and app state:
 **MainTabView** (`MainTabView.swift:4`)
 - Root tab container for authenticated users
 - **Tabs:**
-  1. **Contacts** (`ContactsView`) - Tab icon: `person.2`
-  2. **You** (`ProfileSetupView`) - Tab icon: `person.crop.circle`
+  1. **Timeline** (`BoopTimelineView`) - Tab icon: `clock`
+  2. **Contacts** (`ContactsView`) - Tab icon: `person.2`
+  3. **You** (`ProfileSetupView`) - Tab icon: `person.crop.circle`
 
 #### **Primary Views**
 
-1. **ContactsView** (`ContactsView.swift:11`)
+1. **BoopTimelineView** (`BoopTimelineView.swift:11`)
+   - **Purpose:** Chronological timeline of all boop interactions
+   - **Features:**
+     - Dynamic time-based section headers ("Today", "Yesterday", "2 hours ago", etc.)
+     - Auto-updating relative timestamps using `RelativeDateTimeFormatter`
+     - Grouped interactions with headers that recalculate on every render
+     - Animated boop overlay when new interactions occur
+     - Navigation to detailed interaction view
+   - **Data Source:** SwiftData `@Query` for `BoopInteraction` models (sorted by timestamp, newest first)
+   - **Technical Details:**
+     - Uses `RelativeDateTimeFormatter` with `.full` units style
+     - Groups minute/hour-level timestamps under "Today" to reduce header granularity
+     - Headers display only when transitioning between different time periods
+     - Real-time event broadcasting from `BoopManager.latestBoopEvent`
+
+2. **ContactsView** (`ContactsView.swift:11`)
    - **Purpose:** Display list of saved contacts
    - **Features:**
      - Scrollable list of contact cards
@@ -229,7 +245,7 @@ Used for lightweight data and app state:
      - Sheet: `BoopHistoryView` (when contact selected)
    - **Data Source:** SwiftData `@Query` for `Contact` models
 
-2. **BoopRangingView** (`BoopRangingView.swift:11`)
+3. **BoopRangingView** (`BoopRangingView.swift:11`)
    - **Purpose:** Discover and boop nearby users
    - **Features:**
      - Real-time list of nearby devices with distance indicators
@@ -244,7 +260,7 @@ Used for lightweight data and app state:
      - SwiftData contacts for saved contact lookup
    - **Lifecycle:** Presented as a sheet, dismisses after successful boop
 
-3. **ProfileSetupView** (`ProfileSetupView.swift:4`)
+4. **ProfileSetupView** (`ProfileSetupView.swift:4`)
    - **Purpose:** User profile creation and editing
    - **Modes:**
      - Setup mode (first launch): Blocks navigation until complete
@@ -255,7 +271,7 @@ Used for lightweight data and app state:
      - Save/Continue button (enabled when name is not empty)
    - **Data:** Saves to both SwiftData (`UserProfile` model) and `DataStore`
 
-4. **BoopHistoryView** (in `ContactsView.swift:73`)
+5. **BoopHistoryView** (in `ContactsView.swift:73`)
    - **Purpose:** Display interaction history with a specific contact
    - **Features:**
      - List of all boop interactions
@@ -362,6 +378,35 @@ Located in `/boop-ios/DesignSystem/`:
 4. Both devices call `NISession.run()` with peer token
 5. `NISessionDelegate` callbacks provide distance updates
 
+### Date & Time Formatting
+
+**Timeline Headers** (`BoopTimelineView.swift:23-43`)
+
+The app uses `RelativeDateTimeFormatter` for dynamic, human-readable time displays:
+
+```swift
+let formatter = RelativeDateTimeFormatter()
+formatter.unitsStyle = .full  // "2 hours ago" vs "2 hr. ago"
+let text = formatter.localizedString(for: date, relativeTo: Date())
+```
+
+**Key Implementation Details:**
+- **Dynamic Recalculation:** Headers recalculate on every view render to stay current
+- **Granularity Control:** Minutes/hours are grouped under "Today" to prevent excessive header fragmentation
+- **Sequential Display:** Headers appear only when transitioning between time periods
+- **No Pre-grouping:** Avoid bucketing timestamps into fixed intervals (prevents stale headers)
+
+**Best Practices:**
+- Use `RelativeDateTimeFormatter` instead of `Date.RelativeFormatStyle` when you need more control
+- For timeline/feed UIs, calculate headers per-item rather than pre-grouping into dictionaries
+- Sanitize formatter output to group fine-grained units (e.g., "12 minutes ago" → "Today")
+- Let SwiftUI re-render handle updates rather than manual refresh timers
+
+**Alternative Formatters:**
+- `Date.RelativeFormatStyle`: Simpler API but no granularity control
+- `DateComponentsFormatter`: Good for durations/intervals, not relative times
+- `Date.FormatStyle`: For absolute date/time displays
+
 ### Thread Safety
 
 - `BoopManager`: `@MainActor` - all UI updates on main thread
@@ -442,6 +487,7 @@ boop-ios/
 │   └── ConnectionResponse.swift
 │
 ├── Views/
+│   ├── BoopTimelineView.swift
 │   ├── ContactsView.swift
 │   ├── BoopRangingView.swift
 │   └── ProfileSetupView.swift
