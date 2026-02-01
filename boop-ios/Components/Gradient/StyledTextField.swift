@@ -19,12 +19,12 @@ struct StyledTextField: View {
             // Background layer with fixed shape
             RoundedRectangle(cornerRadius: 22)
                 .fill(isFocused ? Color.clear : Color.formBackgroundInactive)
-                .frame(height: 44)
+                .frame(minHeight: 44)
 
             if isFocused {
                 RoundedRectangle(cornerRadius: 22)
                     .fill(Color.clear)
-                    .frame(height: 44)
+                    .frame(minHeight: 44)
                     .background(
                         AnimatedMeshGradient(
                             colors: gradientColors,
@@ -35,13 +35,13 @@ struct StyledTextField: View {
                     )
             }
 
-            TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.white))
+            TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.white), axis: .vertical)
                 .foregroundStyle(.white)
                 .tint(.white)
                 .multilineTextAlignment(.center)
                 .focused($isFocused)
-                .padding(.horizontal, 12)
-                .frame(height: 44)
+                .padding(12)
+                .frame(minHeight: 44)
         }
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
