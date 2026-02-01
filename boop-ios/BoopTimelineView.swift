@@ -53,7 +53,7 @@ struct BoopTimelineView: View {
 
                 Spacer()
 
-                LazyVStack(spacing: 0) {
+                LazyVStack(spacing: Spacing.md) {
                     ForEach(Array(allInteractions.enumerated()), id: \.element.id) { index, interaction in
                         // Show header if this is the first item or the header changed from previous
                         let currentHeader = headerText(for: interaction.timestamp)
@@ -72,6 +72,7 @@ struct BoopTimelineView: View {
                         } label: {
                             BoopInteractionCard(interaction: interaction)
                         }
+                        .padding(.horizontal, Spacing.lg)
                     }
                 }
                 .scrollContentBackground(Visibility.hidden)
