@@ -11,3 +11,14 @@ struct Boop: Equatable {
     let senderUUID: UUID
     let displayName: String
 }
+
+struct BoopEvent: Equatable, Identifiable {
+    let id = UUID()
+    let boop: Boop
+    let timestamp: Date
+
+    init(boop: Boop) {
+        self.boop = boop
+        self.timestamp = Date()
+    }
+}

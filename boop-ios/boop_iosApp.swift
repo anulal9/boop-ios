@@ -19,6 +19,7 @@ struct boop_iosApp: App {
         self.schema = Schema([
                 Contact.self,
                 UserProfile.self,
+                BoopInteraction.self,
             ])
         self.modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         let configurationUrl = self.modelConfiguration.url

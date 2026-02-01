@@ -13,6 +13,9 @@ import SwiftData
 final class Contact {
     let uuid: UUID
     var displayName: String
+
+    // Relationship with cascade delete - when Contact is deleted, its interactions are too
+    @Relationship(deleteRule: .cascade, inverse: \BoopInteraction.contact)
     var interactions: [BoopInteraction]
 
     init(uuid: UUID, displayName: String, interactions: [BoopInteraction] = []) {

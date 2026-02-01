@@ -17,12 +17,16 @@ final class BoopInteraction {
     var timestamp: Date
     var imageData: [Data] // Use Data for images
 
-    init(title: String, location: String, timestamp: Date, imageData: [Data] = []) {
+    // Relationship to Contact
+    var contact: Contact?
+
+    init(title: String, location: String, timestamp: Date, imageData: [Data] = [], contact: Contact? = nil) {
         self.id = UUID()
         self.title = title
         self.location = location
         self.timestamp = timestamp
         self.imageData = imageData
+        self.contact = contact
     }
 
     var thumbnailCount: Int {
