@@ -11,7 +11,7 @@ import SwiftData
 
 @Model
 final class BoopInteraction {
-    let id: UUID
+    var id: UUID
     var title: String
     var location: String
     var timestamp: Date
