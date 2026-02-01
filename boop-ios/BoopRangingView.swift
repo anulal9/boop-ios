@@ -114,55 +114,50 @@ struct BoopRangingView: View {
                 }
             }
             .animation(.easeInOut(duration: animationDuration), value: showBoop)
-            .onChange(of: boopManager.boopsToRender) { oldValue, newValue in
-                // When a new boop arrives, process it and close the view
-                if !newValue.isEmpty && !showBoop {
-                    handleNewBoop()
-                }
+            .onChange(of: boopManager.latestBoopEvent) { oldValue, newValue in
+                // Only handle if this view is presented and event is new
+                guard let event = newValue, !showBoop else { return }
+                handleNewBoop(event: event)
             }
         }
     }
 
-    private func handleNewBoop() {
-        do {
-            // Pop the boop from the queue
-            let boop = try boopManager.receiveBoopAndRemove()
+    private func handleNewBoop(event: BoopEvent) {
+        let boop = event.boop
 
-            // Store display name for modal
-            currentBoopDisplayName = boop.displayName
+        // Store display name for modal
+        currentBoopDisplayName = boop.displayName
 
-            // Use senderUUID from boop
-            let contactUUID = boop.senderUUID
-            if let contact = contacts.first(where: { $0.uuid == contactUUID }) {
-                let newInteraction = BoopInteraction(
-                    title: boop.displayName,
-                    location: "temp - todo",
-                    timestamp: Date()
-                )
-                contact.interactions.append(newInteraction)
-            } else {
-                let newInteraction = BoopInteraction(
-                    title: boop.displayName,
-                    location: "temp - todo",
-                    timestamp: Date()
-                )
-                let newContact = Contact(uuid: contactUUID, displayName: boop.displayName, interactions: [newInteraction])
-                withAnimation {
-                    modelContext.insert(newContact)
-                }
-            }
+        // Use senderUUID from boop
+        let contactUUID = boop.senderUUID
 
-            // Show modal
-            showBoop = true
+        // Find or create contact
+        let contact: Contact
+        if let existingContact = contacts.first(where: { $0.uuid == contactUUID }) {
+            contact = existingContact
+        } else {
+            // Create new contact
+            contact = Contact(uuid: contactUUID, displayName: boop.displayName)
+            modelContext.insert(contact)
+        }
 
-            // Hide modal and dismiss view after animation duration
-            DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
-                showBoop = false
-                // Close the ranging view
-                isPresented = false
-            }
-        } catch {
-            print("Error attempting to receive boop: \(error)")
+        // Create interaction with contact relationship
+        let newInteraction = BoopInteraction(
+            title: boop.displayName,
+            location: "temp - todo",
+            timestamp: event.timestamp,
+            contact: contact  // Set relationship
+        )
+        modelContext.insert(newInteraction)  // Insert as top-level entity
+        contact.interactions.append(newInteraction)  // Also add to contact's array
+
+        // Show modal
+        showBoop = true
+
+        // Hide modal and dismiss view after animation duration
+        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
+            showBoop = false
+            isPresented = false
         }
     }
 }

@@ -12,7 +12,7 @@ class BoopManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     /// Devices currently in touching range (≤10cm, angles aligned)
     @Published var boopQueue = Set<UUID>()
-    @Published var boopsToRender: [Boop] = []
+    @Published var latestBoopEvent: BoopEvent? = nil
 
     /// Track which devices I've selected
     @Published var mySelections = Set<UUID>()
@@ -131,13 +131,6 @@ class BoopManager: NSObject, ObservableObject {
         }
     }
     
-    func receiveBoopAndRemove() throws -> Boop {
-        if (!self.boopsToRender.isEmpty) {
-            return boopsToRender.popLast()!
-        }
-        
-        throw fatalError("Attempted to render a non-existent boop")
-    }
     
     private func boopDevice(deviceId: UUID) async throws -> Bool {
         // Check if device is connected
@@ -179,7 +172,12 @@ extension BoopManager: BoopDelegate {
 
         print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
         print("📊 BoopManager: Total stored names: \(displayNames.count)")
-        boopsToRender.append(Boop(senderUUID: senderUUID, displayName: displayName))
+
+        // Create boop object
+        let boop = Boop(senderUUID: senderUUID, displayName: displayName)
+
+        // Broadcast event (don't store in queue)
+        latestBoopEvent = BoopEvent(boop: boop)
     }
 
     func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {

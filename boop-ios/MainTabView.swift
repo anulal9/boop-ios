@@ -6,6 +6,11 @@ struct MainTabView: View {
     
     var body: some View {
         TabView {
+            BoopTimelineView()
+                .tabItem {
+                    Label("Timeline", systemImage: "clock.fill")
+                }
+
             ContactsView()
                 .tabItem {
                     Label("Contacts", systemImage: "person.2")
