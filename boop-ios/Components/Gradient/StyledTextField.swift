@@ -36,6 +36,9 @@ struct StyledTextField: View {
                 .focused($isFocused)
                 .padding(12)
         }
+                    .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
         .frame(minHeight: 44)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))

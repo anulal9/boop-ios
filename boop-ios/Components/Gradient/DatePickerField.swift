@@ -43,7 +43,10 @@ struct DatePickerField: View {
     }
 
     var body: some View {
-        Button(action: { showingPicker = true }) {
+        Button(action: {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            showingPicker = true
+        }) {
             ZStack(alignment: .center) {
                 // Background with gradient or inactive color
                 if showingPicker {
