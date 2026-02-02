@@ -44,13 +44,16 @@ struct ProfileSetupView: View {
 
                             Section {
                                 StyledTextField(placeholder: "Name", text: $name)
+                                    .listRowSeparator(.hidden)
                                 DatePickerField(
                                     title: "Set birthday",
                                     placeholder: "Add birthday",
                                     info: "Your birth year is kept private",
                                     selectedDate: $birthday
                                 )
+                                    .listRowSeparator(.hidden)
                                 StyledTextField(placeholder: "Bio", text: $bio)
+                                    .listRowSeparator(.hidden)
                             }
                         }
                         .scrollContentBackground(.hidden)
