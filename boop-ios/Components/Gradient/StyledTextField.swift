@@ -16,23 +16,17 @@ struct StyledTextField: View {
 
     var body: some View {
         ZStack(alignment: .center) {
-            // Background layer with fixed shape
-            RoundedRectangle(cornerRadius: 22)
-                .fill(isFocused ? Color.clear : Color.formBackgroundInactive)
-                .frame(minHeight: 44)
-
+            // Background layer
             if isFocused {
+                AnimatedMeshGradient(
+                    colors: gradientColors,
+                    animationStyle: gradientAnimationStyle,
+                    duration: gradientDuration
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 22))
+            } else {
                 RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.clear)
-                    .frame(minHeight: 44)
-                    .background(
-                        AnimatedMeshGradient(
-                            colors: gradientColors,
-                            animationStyle: gradientAnimationStyle,
-                            duration: gradientDuration
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 22))
-                    )
+                    .fill(Color.formBackgroundInactive)
             }
 
             TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.white), axis: .vertical)
@@ -41,8 +35,8 @@ struct StyledTextField: View {
                 .multilineTextAlignment(.center)
                 .focused($isFocused)
                 .padding(12)
-                .frame(minHeight: 44)
         }
+        .frame(minHeight: 44)
         .listRowBackground(Color.clear)
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }
