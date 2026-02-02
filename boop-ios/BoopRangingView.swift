@@ -120,7 +120,10 @@ struct BoopRangingView: View {
                 handleNewBoop(event: event)
             }
         }
+        .onAppear { boopManager.start() }
+        .onDisappear { boopManager.stop() }
     }
+        
 
     private func handleNewBoop(event: BoopEvent) {
         let boop = event.boop

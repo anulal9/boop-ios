@@ -44,8 +44,8 @@ class BluetoothManager: NSObject, ObservableObject {
         // Create service with UWB token
         
         service = BluetoothManagerServiceImpl()
-        service.delegate = self
-        service.updateUWBToken(uwbDiscoveryToken)
+        service.bleServiceDelegate = self
+        service.updateUWBToken()
         if let boopDelegate = boopDelegate {
             service.setBoopDelegate(boopDelegate: boopDelegate)
         }
@@ -220,6 +220,10 @@ class BluetoothManager: NSObject, ObservableObject {
 
 // MARK: - BluetoothServiceDelegate
 extension BluetoothManager: BluetoothServiceDelegate {
+    func getCurrentUWBToken() -> Data? {
+        return uwbDiscoveryToken
+    }
+    
     func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral) {
         self.nearbyDevices.removeValue(forKey: deviceID)
     }
@@ -266,7 +270,7 @@ extension BluetoothManager: BluetoothServiceDelegate {
         discoveredDevices.removeValue(forKey: deviceID)
         nearbyDevices.removeValue(forKey: deviceID)
         uwbManager = UWBManager(managerDelegate: self)
-        service.updateUWBToken(uwbDiscoveryToken)
+        service.updateUWBToken()
         
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
         print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices.count), nearbyDevices: \(nearbyDevices.count), connectedPeripherals: \(connectedPeripherals.count), devicesWithUWBRanging: \(devicesWithUWBRanging.count)")

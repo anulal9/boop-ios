@@ -71,7 +71,6 @@ class UWBManager: NSObject, UWBManaging {
     // MARK: - Init
     override init() {
         super.init()
-        setupSession()
     }
 
     // MARK: - Setup
@@ -309,16 +308,6 @@ extension UWBManager: NISessionDelegate {
                 print("UWB: Setting session for this device")
                 niSession = session
             }
-//            guard let peerToken = session.discoveryToken else {
-//                print("UWB: Could not find peer token for session")
-//                return
-//            }
-//            guard let peerDeviceID = deviceID(for: peerToken) else {
-//                print("UWB: Could not find device id for session token. ")
-//                self.startRanging(peerToken: peerToken)
-//                return
-//            }
-//            self.startRanging(to: peerDeviceID, peerToken: peerToken)
         }
     }
 }

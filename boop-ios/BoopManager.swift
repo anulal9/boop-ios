@@ -46,8 +46,6 @@ class BoopManager: NSObject, ObservableObject {
         self.bluetoothManager = BluetoothManager(uwbManager: UWBManager())
         super.init()
         self.bluetoothManager.setBoopDelegate(self)
-        self.bluetoothManager.start()
-        setupObservers()
     }
     
     // MARK: - Setup
@@ -96,6 +94,15 @@ class BoopManager: NSObject, ObservableObject {
                 previousDevices = deviceIDs
             }
             .store(in: &cancellables)
+    }
+    
+    func start() {
+        setupObservers()
+        bluetoothManager.start()
+    }
+    
+    func stop() {
+        bluetoothManager.stop()
     }
 
     // MARK: - Public Methods
