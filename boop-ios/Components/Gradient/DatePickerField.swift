@@ -46,22 +46,16 @@ struct DatePickerField: View {
         Button(action: { showingPicker = true }) {
             ZStack(alignment: .center) {
                 // Background with gradient or inactive color
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(showingPicker ? Color.clear : Color.formBackgroundInactive)
-                    .frame(height: 44)
-
                 if showingPicker {
+                    AnimatedMeshGradient(
+                        colors: gradientColors,
+                        animationStyle: gradientAnimationStyle,
+                        duration: gradientDuration
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
+                } else {
                     RoundedRectangle(cornerRadius: 22)
-                        .fill(Color.clear)
-                        .frame(height: 44)
-                        .background(
-                            AnimatedMeshGradient(
-                                colors: gradientColors,
-                                animationStyle: gradientAnimationStyle,
-                                duration: gradientDuration
-                            )
-                            .clipShape(RoundedRectangle(cornerRadius: 22))
-                        )
+                        .fill(Color.formBackgroundInactive)
                 }
 
                 // Display text
@@ -69,8 +63,8 @@ struct DatePickerField: View {
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 12)
-                    .frame(height: 44)
             }
+            .frame(height: 44)
         }
         .buttonStyle(.plain)
         .listRowBackground(Color.clear)
