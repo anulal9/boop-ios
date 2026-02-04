@@ -127,15 +127,15 @@ struct BluetoothMessage {
     }
     
     /// Create a message with profile data (for connection accept/request)
-    init(senderUUID: UUID, messageType: MessageType, displayName: String, birthday: Date?, bio: String?) {
+    init(senderUUID: UUID, messageType: MessageType, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         self.senderUUID = senderUUID
         self.messageType = messageType
         self.displayName = displayName
-        self.payload = Self.encodeProfilePayload(birthday: birthday, bio: bio)
+        self.payload = Self.encodeProfilePayload(birthday: birthday, bio: bio, gradientColors: gradientColors)
     }
     
     /// Decode profile data from payload
-    func decodeProfileData() -> (birthday: Date?, bio: String?) {
+    func decodeProfileData() -> (birthday: Date?, bio: String?, gradientColors: [String]) {
         return Self.decodeProfilePayload(payload)
     }
 
@@ -144,8 +144,8 @@ struct BluetoothMessage {
     private static let maxBioBytes = 65535
     
     /// Encodes profile data into a binary payload
-    /// Format: [HasBirthday: 1 byte][Birthday: 8 bytes if present][BioLength: 2 bytes][Bio: variable]
-    private static func encodeProfilePayload(birthday: Date?, bio: String?) -> Data {
+    /// Format: [HasBirthday: 1 byte][Birthday: 8 bytes if present][BioLength: 2 bytes][Bio: variable][ColorCount: 1 byte][Colors: variable]
+    private static func encodeProfilePayload(birthday: Date?, bio: String?, gradientColors: [String]) -> Data {
         var data = Data()
         
         // Birthday
@@ -172,18 +172,26 @@ struct BluetoothMessage {
         data.append(lowByte)
         data.append(truncatedBio)
         
+        // Gradient colors - encode as comma-separated string
+        let colorsString = gradientColors.joined(separator: ",")
+        let colorsData = colorsString.data(using: .utf8) ?? Data()
+        let colorsCount = min(colorsData.count, 255) // Limit to 1 byte length
+        data.append(UInt8(colorsCount))
+        data.append(Data(colorsData.prefix(colorsCount)))
+        
         return data
     }
     
     /// Decodes profile data from a binary payload
-    private static func decodeProfilePayload(_ data: Data) -> (birthday: Date?, bio: String?) {
+    private static func decodeProfilePayload(_ data: Data) -> (birthday: Date?, bio: String?, gradientColors: [String]) {
         guard data.count >= 9 else {
-            return (nil, nil)
+            return (nil, nil, [])
         }
         
         var offset = 0
         var birthday: Date?
         var bio: String?
+        var gradientColors: [String] = []
         
         // Decode birthday
         let hasBirthday = data[offset] == 1
@@ -198,7 +206,7 @@ struct BluetoothMessage {
         
         // Decode bio
         guard data.count >= offset + 2 else {
-            return (birthday, nil)
+            return (birthday, nil, [])
         }
         
         let bioLength = Int(data[offset]) << 8 | Int(data[offset + 1])
@@ -207,9 +215,23 @@ struct BluetoothMessage {
         if bioLength > 0, data.count >= offset + bioLength {
             let bioData = data.subdata(in: offset..<(offset + bioLength))
             bio = String(data: bioData, encoding: .utf8)
+            offset += bioLength
         }
         
-        return (birthday, bio)
+        // Decode gradient colors
+        if data.count >= offset + 1 {
+            let colorsLength = Int(data[offset])
+            offset += 1
+            
+            if colorsLength > 0, data.count >= offset + colorsLength {
+                let colorsData = data.subdata(in: offset..<(offset + colorsLength))
+                if let colorsString = String(data: colorsData, encoding: .utf8) {
+                    gradientColors = colorsString.split(separator: ",").map(String.init)
+                }
+            }
+        }
+        
+        return (birthday, bio, gradientColors)
     }
 
     /// Truncates a display name to fit within the maximum byte limit

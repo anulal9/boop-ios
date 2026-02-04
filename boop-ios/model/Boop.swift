@@ -6,12 +6,14 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct Boop: Equatable {
     let senderUUID: UUID
     let displayName: String
     let birthday: Date?
     let bio: String?
+    let gradientColors: [Color]
 }
 
 struct BoopEvent: Equatable, Identifiable {

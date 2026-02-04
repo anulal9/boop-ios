@@ -2,6 +2,7 @@ import Foundation
 import CoreBluetooth
 import Combine
 import UIKit
+import SwiftUI
 
 // MARK: - Boop Manager
 /// Manages the queue of devices that are in "boop" range (touching distance)
@@ -163,7 +164,8 @@ class BoopManager: NSObject, ObservableObject {
                 messageType: messageType,
                 displayName: try await self.displayName.value,
                 birthday: profile?.birthday,
-                bio: profile?.bio
+                bio: profile?.bio,
+                gradientColors: profile?.gradientColorsData ?? []
             )
             print("Boop: Sending BLE Message with profile data")
             bluetoothManager.sendMessage(message, to: deviceId)
@@ -175,7 +177,7 @@ class BoopManager: NSObject, ObservableObject {
     }
 }
 extension BoopManager: BoopDelegate {
-    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
+    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         print("🎉 BoopManager: Received boop from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name
@@ -185,14 +187,36 @@ extension BoopManager: BoopDelegate {
         print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
         print("📊 BoopManager: Total stored names: \(displayNames.count)")
 
+        // Convert gradient color strings to Color objects
+        let colors = gradientColors.compactMap { colorString -> Color? in
+            switch colorString {
+            case "red": return .red
+            case "orange": return .orange
+            case "yellow": return .yellow
+            case "green": return .green
+            case "cyan": return .cyan
+            case "blue": return .blue
+            case "indigo": return .indigo
+            case "purple": return .purple
+            case "pink": return .pink
+            case "mint": return .mint
+            case "teal": return .teal
+            case "brown": return .brown
+            case "white": return .white
+            case "black": return .black
+            case "gray": return .gray
+            default: return nil
+            }
+        }
+
         // Create boop object with profile data
-        let boop = Boop(senderUUID: senderUUID, displayName: displayName, birthday: birthday, bio: bio)
+        let boop = Boop(senderUUID: senderUUID, displayName: displayName, birthday: birthday, bio: bio, gradientColors: colors)
 
         // Broadcast event (don't store in queue)
         latestBoopEvent = BoopEvent(boop: boop)
     }
 
-    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
+    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         print("📨 BoopManager: Received boop request from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name
@@ -207,7 +231,7 @@ extension BoopManager: BoopDelegate {
         checkForMutualSelection(with: peripheralUUID)
     }
 
-    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
+    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         print("👋 BoopManager: Received presence from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name

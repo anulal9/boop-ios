@@ -139,6 +139,7 @@ struct BoopRangingView: View {
             contact.displayName = boop.displayName
             contact.birthday = boop.birthday
             contact.bio = boop.bio
+            contact.gradientColorsData = boop.gradientColors.map { Contact.colorToString($0) }
         } else {
             // Create new contact with profile data
             contact = Contact(
@@ -146,7 +147,8 @@ struct BoopRangingView: View {
                 displayName: boop.displayName,
                 avatarData: nil,
                 birthday: boop.birthday,
-                bio: boop.bio
+                bio: boop.bio,
+                gradientColors: boop.gradientColors
             )
             modelContext.insert(contact)
         }

@@ -105,7 +105,8 @@ class BluetoothManager: NSObject, ObservableObject {
             messageType: .presence,
             displayName: displayName,
             birthday: birthday,
-            bio: bio
+            bio: bio,
+            gradientColors: []
         )
         sendMessage(message, to: device)
     }

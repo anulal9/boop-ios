@@ -25,9 +25,9 @@ protocol BluetoothServiceDelegate: AnyObject {
 
 @MainActor
 protocol BoopDelegate: AnyObject {
-    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?)
-    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?)
-    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?)
+    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
+    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
+    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
 }
 
 // MARK: - Service Protocol
@@ -221,19 +221,19 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                 switch message.messageType {
                 case .boop:
                     print("🎉 BLE Service: Routing boop message to delegate")
-                    let (birthday, bio) = message.decodeProfileData()
+                    let (birthday, bio, gradientColors) = message.decodeProfileData()
                     self.boopDelegate?
-                        .didReceiveBoop(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio)
+                        .didReceiveBoop(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio, gradientColors: gradientColors)
                 case .boopRequest:
                     print("📨 BLE Service: Routing boop request to delegate")
-                    let (birthday, bio) = message.decodeProfileData()
+                    let (birthday, bio, gradientColors) = message.decodeProfileData()
                     self.boopDelegate?
-                        .didReceiveBoopRequest(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio)
+                        .didReceiveBoopRequest(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio, gradientColors: gradientColors)
                 case .presence:
                     print("👋 BLE Service: Routing presence message to delegate")
-                    let (birthday, bio) = message.decodeProfileData()
+                    let (birthday, bio, gradientColors) = message.decodeProfileData()
                     self.boopDelegate?
-                        .didReceivePresence(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio)
+                        .didReceivePresence(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio, gradientColors: gradientColors)
                 case .connectionRequest:
                     self.delegate?.didReceiveConnectionRequest(from: message.senderUUID)
                 case .connectionAccept:

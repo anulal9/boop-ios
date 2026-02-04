@@ -12,39 +12,49 @@ struct ContactDetailView: View {
     
     var body: some View {
         NavigationView {
-            Form {
-                Section {
-                    ProfileDisplayCard(
-                        avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
-                        displayName: contact.displayName,
-                        birthday: contact.birthday,
-                        bio: contact.bio
-                    )
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
+            ZStack {
+                // Use contact's gradient colors as background
+                AnimatedMeshGradient(
+                    colors: contact.gradientColors,
+                    animationStyle: .horizontalWave,
+                    duration: 3.0
+                )
+                .ignoresSafeArea()
                 
-                // Interaction History Section
-                Section {
-                    NavigationLink {
-                        BoopHistoryView(contact: contact)
-                    } label: {
-                        HStack {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .foregroundColor(.accentPrimary)
-                            Text("Boop History")
-                                .foregroundColor(.white)
-                            Spacer()
-                            Text("\(contact.interactions.count)")
-                                .subtitleStyle()
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.vertical, Spacing.sm)
+                Form {
+                    Section {
+                        ProfileDisplayCard(
+                            avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
+                            displayName: contact.displayName,
+                            birthday: contact.birthday,
+                            bio: contact.bio
+                        )
                     }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    
+                    // Interaction History Section
+                    Section {
+                        NavigationLink {
+                            BoopHistoryView(contact: contact)
+                        } label: {
+                            HStack {
+                                Image(systemName: "clock.arrow.circlepath")
+                                    .foregroundColor(.accentPrimary)
+                                Text("Boop History")
+                                    .foregroundColor(.white)
+                                Spacer()
+                                Text("\(contact.interactions.count)")
+                                    .subtitleStyle()
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.vertical, Spacing.sm)
+                        }
+                    }
+                    .listRowBackground(Color.clear)
                 }
-                .listRowBackground(Color.clear)
+                .scrollContentBackground(.hidden)
             }
-            .scrollContentBackground(.hidden)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -55,7 +65,6 @@ struct ContactDetailView: View {
                 }
             }
         }
-        .pageBackground()
     }
 }
 
