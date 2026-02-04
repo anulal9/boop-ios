@@ -10,6 +10,8 @@ import Foundation
 struct Boop: Equatable {
     let senderUUID: UUID
     let displayName: String
+    let birthday: Date?
+    let bio: String?
 }
 
 struct BoopEvent: Equatable, Identifiable {

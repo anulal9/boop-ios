@@ -125,8 +125,93 @@ struct BluetoothMessage {
         self.displayName = displayName
         self.payload = payload
     }
+    
+    /// Create a message with profile data (for connection accept/request)
+    init(senderUUID: UUID, messageType: MessageType, displayName: String, birthday: Date?, bio: String?) {
+        self.senderUUID = senderUUID
+        self.messageType = messageType
+        self.displayName = displayName
+        self.payload = Self.encodeProfilePayload(birthday: birthday, bio: bio)
+    }
+    
+    /// Decode profile data from payload
+    func decodeProfileData() -> (birthday: Date?, bio: String?) {
+        return Self.decodeProfilePayload(payload)
+    }
 
     // MARK: - Helper Methods
+    /// Maximum bio length in bytes (fits in UInt16)
+    private static let maxBioBytes = 65535
+    
+    /// Encodes profile data into a binary payload
+    /// Format: [HasBirthday: 1 byte][Birthday: 8 bytes if present][BioLength: 2 bytes][Bio: variable]
+    private static func encodeProfilePayload(birthday: Date?, bio: String?) -> Data {
+        var data = Data()
+        
+        // Birthday
+        if let birthday = birthday {
+            data.append(1) // Has birthday
+            let timeInterval = birthday.timeIntervalSince1970
+            var bigEndianValue = timeInterval.bitPattern.bigEndian
+            withUnsafeBytes(of: &bigEndianValue) { data.append(contentsOf: $0) }
+        } else {
+            data.append(0) // No birthday
+            data.append(Data(count: 8)) // Padding
+        }
+        
+        // Bio - limit size to fit in UInt16
+        let bioData = (bio ?? "").data(using: .utf8) ?? Data()
+        let actualBioCount = bioData.count
+        let limitedBioCount = min(actualBioCount, maxBioBytes)
+        let truncatedBio = Data(bioData.prefix(limitedBioCount))
+        let bioCount = truncatedBio.count
+        let bioLength = UInt16(clamping: bioCount)
+        let highByte = UInt8(truncating: (bioLength >> 8) as NSNumber)
+        let lowByte = UInt8(truncating: bioLength as NSNumber)
+        data.append(highByte)
+        data.append(lowByte)
+        data.append(truncatedBio)
+        
+        return data
+    }
+    
+    /// Decodes profile data from a binary payload
+    private static func decodeProfilePayload(_ data: Data) -> (birthday: Date?, bio: String?) {
+        guard data.count >= 9 else {
+            return (nil, nil)
+        }
+        
+        var offset = 0
+        var birthday: Date?
+        var bio: String?
+        
+        // Decode birthday
+        let hasBirthday = data[offset] == 1
+        offset += 1
+        
+        if hasBirthday {
+            let timeIntervalBits = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt64.self).bigEndian }
+            let timeInterval = Double(bitPattern: timeIntervalBits)
+            birthday = Date(timeIntervalSince1970: timeInterval)
+        }
+        offset += 8
+        
+        // Decode bio
+        guard data.count >= offset + 2 else {
+            return (birthday, nil)
+        }
+        
+        let bioLength = Int(data[offset]) << 8 | Int(data[offset + 1])
+        offset += 2
+        
+        if bioLength > 0, data.count >= offset + bioLength {
+            let bioData = data.subdata(in: offset..<(offset + bioLength))
+            bio = String(data: bioData, encoding: .utf8)
+        }
+        
+        return (birthday, bio)
+    }
+
     /// Truncates a display name to fit within the maximum byte limit
     /// Ensures we don't cut in the middle of a multi-byte UTF-8 character
     private static func truncateDisplayName(_ name: String) -> String {

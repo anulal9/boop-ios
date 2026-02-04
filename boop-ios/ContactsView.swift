@@ -46,7 +46,7 @@ struct ContactsView: View {
                 }
             }
             .sheet(item: $selectedContact) { contact in
-                BoopHistoryView(contact: contact)
+                ContactDetailView(contact: contact)
             }
             .sheet(isPresented: $showBoopRanging) {
                 BoopRangingView(isPresented: $showBoopRanging)
@@ -70,17 +70,7 @@ func buildContactCard(contact: Contact) -> some View {
     }
 }
 
-struct BoopHistoryView: View {
-    let contact: Contact
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text("Boop History for \(contact.displayName)")
-                .heading1Style()
-            List(contact.interactions) { interaction in
-                BoopInteractionCard(interaction: interaction)
-            }
-        }
-        .padding()
-    }
+#Preview {
+    ContactsView()
+        .modelContainer(for: Contact.self, inMemory: true)
 }

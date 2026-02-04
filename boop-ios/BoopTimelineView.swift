@@ -115,9 +115,19 @@ struct BoopTimelineView: View {
         let contact: Contact
         if let existingContact = contacts.first(where: { $0.uuid == contactUUID }) {
             contact = existingContact
+            // Update contact with latest profile data
+            contact.displayName = boop.displayName
+            contact.birthday = boop.birthday
+            contact.bio = boop.bio
         } else {
-            // Create new contact
-            contact = Contact(uuid: contactUUID, displayName: boop.displayName)
+            // Create new contact with profile data
+            contact = Contact(
+                uuid: contactUUID,
+                displayName: boop.displayName,
+                avatarData: nil,
+                birthday: boop.birthday,
+                bio: boop.bio
+            )
             modelContext.insert(contact)
         }
 

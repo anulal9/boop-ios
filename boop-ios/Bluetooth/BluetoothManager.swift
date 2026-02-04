@@ -97,13 +97,15 @@ class BluetoothManager: NSObject, ObservableObject {
         }
     }
 
-    func sendPresence(to device: UUID, displayName: String) {
+    func sendPresence(to device: UUID, displayName: String, birthday: Date? = nil, bio: String? = nil) {
         print("📤 BT Manager: Sending presence to \(device.uuidString.prefix(8))")
         print("📤 BT Manager: My UUID: \(localDeviceUUID.uuidString.prefix(8)), My displayName: '\(displayName)'")
         let message = BluetoothMessage(
             senderUUID: localDeviceUUID,
             messageType: .presence,
-            displayName: displayName
+            displayName: displayName,
+            birthday: birthday,
+            bio: bio
         )
         sendMessage(message, to: device)
     }

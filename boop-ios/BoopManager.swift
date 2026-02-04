@@ -71,8 +71,14 @@ class BoopManager: NSObject, ObservableObject {
                 for deviceID in newDevices {
                     Task {
                         if let displayName = try? await self.displayName.value {
+                            let profile = await DataStore.shared.getUserProfile()
                             print("👋 BoopManager: Sending presence to \(deviceID.uuidString.prefix(8)) with name '\(displayName)'")
-                            self.bluetoothManager.sendPresence(to: deviceID, displayName: displayName)
+                            self.bluetoothManager.sendPresence(
+                                to: deviceID,
+                                displayName: displayName,
+                                birthday: profile?.birthday,
+                                bio: profile?.bio
+                            )
                         } else {
                             print("⚠️ BoopManager: Could not get display name for presence")
                         }
@@ -149,12 +155,17 @@ class BoopManager: NSObject, ObservableObject {
     private func sendBluetoothMessage(deviceId: UUID,
                                       messageType: BluetoothMessage.MessageType) async -> Bool {
         do {
+            // Get user profile data
+            let profile = await DataStore.shared.getUserProfile()
+            
             let message = BluetoothMessage(
                 senderUUID: bluetoothManager.getLocalDeviceUUID(),
                 messageType: messageType,
-                displayName: try await self.displayName.value
+                displayName: try await self.displayName.value,
+                birthday: profile?.birthday,
+                bio: profile?.bio
             )
-            print("Boop: Sending BLE Message")
+            print("Boop: Sending BLE Message with profile data")
             bluetoothManager.sendMessage(message, to: deviceId)
             return true
         } catch {
@@ -164,7 +175,7 @@ class BoopManager: NSObject, ObservableObject {
     }
 }
 extension BoopManager: BoopDelegate {
-    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+    func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
         print("🎉 BoopManager: Received boop from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name
@@ -174,14 +185,14 @@ extension BoopManager: BoopDelegate {
         print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
         print("📊 BoopManager: Total stored names: \(displayNames.count)")
 
-        // Create boop object
-        let boop = Boop(senderUUID: senderUUID, displayName: displayName)
+        // Create boop object with profile data
+        let boop = Boop(senderUUID: senderUUID, displayName: displayName, birthday: birthday, bio: bio)
 
         // Broadcast event (don't store in queue)
         latestBoopEvent = BoopEvent(boop: boop)
     }
 
-    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+    func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
         print("📨 BoopManager: Received boop request from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name
@@ -196,7 +207,7 @@ extension BoopManager: BoopDelegate {
         checkForMutualSelection(with: peripheralUUID)
     }
 
-    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String) {
+    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?) {
         print("👋 BoopManager: Received presence from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
         // Store mapping and display name
