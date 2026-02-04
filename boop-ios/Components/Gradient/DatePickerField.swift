@@ -15,15 +15,6 @@ struct DatePickerField: View {
     private let days = Array(1...31)
     private let years: [Int]
 
-    // Text field specific gradient styling
-    private let gradientColors: [Color] = [
-        .purple.opacity(0.6), .blue.opacity(0.6), .cyan.opacity(0.6),
-        .pink.opacity(0.6), .indigo.opacity(0.7), .teal.opacity(0.6),
-        .purple.opacity(0.6), .blue.opacity(0.6), .cyan.opacity(0.6)
-    ]
-    private let gradientAnimationStyle: AnimatedMeshGradient.AnimationStyle = .verticalWave
-    private let gradientDuration: Double = 3.0
-
     init(title: String, placeholder: String, info: String, selectedDate: Binding<Date?>) {
         self.title = title
         self.placeholder = placeholder
@@ -47,27 +38,19 @@ struct DatePickerField: View {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             showingPicker = true
         }) {
-            ZStack(alignment: .center) {
-                // Background with gradient or inactive color
-                if showingPicker {
-                    AnimatedMeshGradient(
-                        colors: gradientColors,
-                        animationStyle: gradientAnimationStyle,
-                        duration: gradientDuration
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 22))
-                } else {
-                    RoundedRectangle(cornerRadius: 22)
-                        .fill(Color.formBackgroundInactive)
+            Text(displayText)
+                .foregroundStyle(displayText == placeholder ? Color.white.opacity(0.6) : Color.white)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity)
+                .background(.ultraThinMaterial)
+                .cornerRadius(12)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
                 }
-
-                // Display text
-                Text(displayText)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 12)
-            }
-            .frame(height: 44)
+                .frame(height: 44)
         }
         .buttonStyle(.plain)
         .listRowBackground(Color.clear)
@@ -168,14 +151,14 @@ private struct DatePickerSheet: View {
                 Button("Clear") {
                     onClear()
                 }
-                .foregroundColor(.white)
+                .foregroundColor(.black)
                 .font(.system(size: 17))
 
                 Spacer()
 
                 Text(title)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
 
                 Spacer()
 
@@ -196,7 +179,7 @@ private struct DatePickerSheet: View {
             )
             .datePickerStyle(.wheel)
             .labelsHidden()
-            .colorScheme(.dark)
+            .colorScheme(.light)
             .onChange(of: tempDate) { _, newDate in
                 let components = Calendar.current.dateComponents([.month, .day, .year], from: newDate)
                 selectedMonth = (components.month ?? 1) - 1
@@ -210,15 +193,15 @@ private struct DatePickerSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 14))
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
 
                 Text(info)
                     .font(.system(size: 14))
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
             }
             .padding(.bottom, 20)
         }
-        .background(Color.backgroundPrimary)
+        .background(.ultraThinMaterial)
     }
 }
 

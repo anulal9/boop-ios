@@ -8,12 +8,6 @@ struct ProfilePhotoSelector: View {
     private let size: CGFloat = 280
     private let cameraCircleSize: CGFloat = 70
 
-    private let profileGradientColors: [Color] = [
-        .purple, .blue, .purple,
-        .blue, .purple, .blue,
-        .purple, .blue, .purple
-    ]
-
     var body: some View {
         PhotosPicker(selection: $imageSelection, matching: .images) {
             Group {
@@ -23,58 +17,46 @@ struct ProfilePhotoSelector: View {
                         .resizable()
                         .scaledToFill()
                 } else {
-                    // Show gradient with person icon when no photo
+                    // Show icon when no photo
                     ZStack(alignment: .center) {
-                        AnimatedMeshGradient(
-                            colors: profileGradientColors,
-                            animationStyle: .horizontalWave,
-                            duration: 3.0
-                        )
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .overlay {
+                                Circle()
+                                    .stroke(Color.white.opacity(0.2), lineWidth: 2)
+                            }
 
-                        Image(systemName: "person.circle.fill")
+                        Image(systemName: "person.fill")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .foregroundColor(.black.opacity(0.5))
-                            .frame(width: size, height: size)
+                            .foregroundColor(Color.white.opacity(0.6))
+                            .padding(60)
                     }
                 }
             }
             .frame(width: size, height: size)
             .clipShape(Circle())
             .overlay(alignment: .bottomTrailing) {
-                // Camera icon circle
-                Group {
-                    if avatarImage != nil {
-                        // Gradient background when photo is present
-                        ZStack {
-                            AnimatedMeshGradient(
-                                colors: profileGradientColors,
-                                animationStyle: .horizontalWave,
-                                duration: 3.0
-                            )
-
-                            Image(systemName: "camera.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .foregroundColor(.white)
-                                .frame(width: 28, height: 28)
-                        }
-                    } else {
-                        // Solid background when no photo
+                // Camera icon circle - only shown when photo is selected
+                if avatarImage != nil {
+                    ZStack {
                         Circle()
-                            .fill(Color.formBackgroundInactive)
+                            .fill(.ultraThinMaterial)
                             .overlay {
-                                Image(systemName: "camera.fill")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .foregroundColor(.white)
-                                    .frame(width: 28, height: 28)
+                                Circle()
+                                    .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
                             }
+
+                        Image(systemName: "camera.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(.white)
+                            .frame(width: 28, height: 28)
                     }
+                    .frame(width: cameraCircleSize, height: cameraCircleSize)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                 }
-                .frame(width: cameraCircleSize, height: cameraCircleSize)
-                .clipShape(Circle())
-                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
             }
         }
         .buttonStyle(.plain)

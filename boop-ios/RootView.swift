@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var isProfileLoaded: Bool? = nil
 
     private func checkProfileExists() {
@@ -16,8 +17,16 @@ struct RootView: View {
                 if isProfileLoaded {
                     MainTabView()
                 } else {
-                    ProfileSetupView(onProfileUpdated: {
-                        self.isProfileLoaded = true
+                    ProfileSetupView(onSave: { profile, _ in
+                        Task {
+                            modelContext.insert(profile)
+                            await DataStore.shared.setUserProfile(profile)
+                            await DataStore.shared.setProfileComplete(true)
+                            
+                            await MainActor.run {
+                                self.isProfileLoaded = true
+                            }
+                        }
                     })
                 }
             } else {

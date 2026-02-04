@@ -9,13 +9,12 @@ struct ProfileView: View {
     @State private var bio = ""
     @State private var isLoading = false
     @State private var isEditing = false
+    @State private var isEditingDisplay = false
 
     @State private var imageSelection: PhotosPickerItem?
     @State private var avatarImage: AvatarImage?
-
-    var canSubmit: Bool {
-        !name.isEmptyAfterSanitizing
-    }
+    @State private var gradientColors: [Color] = []
+    @State private var showColorPicker = false
 
     var body: some View {
         NavigationView {
@@ -29,6 +28,8 @@ struct ProfileView: View {
                 } else {
                     if isEditing {
                         editModeView
+                    } else if isEditingDisplay {
+                        editDisplayModeView
                     } else {
                         displayModeView
                     }
@@ -36,9 +37,27 @@ struct ProfileView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !isEditing && !isLoading {
-                    Button("Edit") {
-                        isEditing = true
+                if !isEditing && !isEditingDisplay && !isLoading {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Edit") {
+                            isEditing = true
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Customize") {
+                            isEditingDisplay = true
+                        }
+                    }
+                } else if isEditingDisplay {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Done") {
+                            saveDisplayChanges()
+                        }
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Cancel") {
+                            cancelDisplayChanges()
+                        }
                     }
                 }
             }
@@ -54,78 +73,134 @@ struct ProfileView: View {
     }
     
     private var displayModeView: some View {
-        Form {
-            Section {
-                ProfileDisplayCard(
-                    avatarImage: avatarImage?.image,
-                    displayName: name,
-                    birthday: birthday,
-                    bio: bio.isEmpty ? nil : bio
+        NavigationView {
+            ZStack {
+                AnimatedMeshGradient(
+                    colors: gradientColors,
+                    animationStyle: .horizontalWave,
+                    duration: 3.0
                 )
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-        }
-        .scrollContentBackground(.hidden)
-        .pageBackground()
-    }
-    
-    private var editModeView: some View {
-        ZStack(alignment: .bottom) {
-            Form {
-                Section {
-                    ProfilePhotoSelector(
-                        imageSelection: $imageSelection,
-                        avatarImage: avatarImage
-                    )
-                    .frame(maxWidth: .infinity)
+                .ignoresSafeArea()
+                
+                Form {
+                    Section {
+                        ProfileDisplayCard(
+                            avatarImage: avatarImage?.image,
+                            displayName: name,
+                            birthday: birthday,
+                            bio: bio.isEmpty ? nil : bio
+                        )
+                    }
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
                 }
-
-                Section {
-                    StyledTextField(placeholder: "Name", text: $name)
-                        .listRowSeparator(.hidden)
-                    DatePickerField(
-                        title: "Birthday",
-                        placeholder: "Add birthday",
-                        info: "Your birth year is kept private",
-                        selectedDate: $birthday
-                    )
-                    .listRowSeparator(.hidden)
-                    StyledTextField(placeholder: "Bio", text: $bio)
-                        .listRowSeparator(.hidden)
-                }
-                
-                Section {
-                    Color.clear
-                        .frame(height: 80)
-                        .listRowBackground(Color.clear)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .onTapGesture {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
-            
-            if canSubmit {
-                VStack {
-                    Button(action: saveProfile) {
-                        if isLoading {
-                            ProgressView()
-                        } else {
-                            Text("Save")
-                        }
-                    }
-                    .disabled(isLoading)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                }
-                .background(Color(uiColor: .systemBackground))
-                .ignoresSafeArea(.keyboard, edges: .bottom)
+                .scrollContentBackground(.hidden)
             }
         }
-        .pageBackground()
+    }
+    
+    private var editModeView: some View {
+        ProfileSetupView(
+            initialName: name,
+            initialBirthday: birthday,
+            initialBio: bio,
+            initialAvatarImage: avatarImage,
+            buttonText: "Save",
+            requireAllFields: false,
+            isEditMode: true,
+            gradientColors: gradientColors,
+            onSave: { profile, avatar in
+                saveProfile(profile: profile, avatar: avatar)
+            }
+        )
+    }
+    
+    private var editDisplayModeView: some View {
+        NavigationView {
+            ZStack {
+                AnimatedMeshGradient(
+                    colors: gradientColors,
+                    animationStyle: .horizontalWave,
+                    duration: 3.0
+                )
+                .ignoresSafeArea()
+                
+                VStack {
+                    Form {
+                        Section {
+                            ProfileDisplayCard(
+                                avatarImage: avatarImage?.image,
+                                displayName: name,
+                                birthday: birthday,
+                                bio: bio.isEmpty ? nil : bio
+                            )
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+                    }
+                    .scrollContentBackground(.hidden)
+                    
+                    // Display customization controls
+                    VStack(spacing: 16) {
+                        Button(action: {
+                            showColorPicker = true
+                        }) {
+                            HStack {
+                                Text("Gradient Colors")
+                                    .foregroundStyle(.white)
+                                    .font(.headline)
+                                Spacer()
+                                HStack(spacing: 4) {
+                                    ForEach(Array(Set(gradientColors)).prefix(2), id: \.self) { color in
+                                        Circle()
+                                            .fill(color)
+                                            .frame(width: 32, height: 32)
+                                    }
+                                }
+                            }
+                            .padding()
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal)
+                    }
+                    .padding(.bottom)
+                }
+            }
+            .sheet(isPresented: $showColorPicker) {
+                DisplayColorPickerSheet(gradientColors: $gradientColors)
+            }
+        }
+    }
+    
+    private func saveDisplayChanges() {
+        Task {
+            if var profileData = await DataStore.shared.getUserProfile() {
+                let profile = UserProfile(
+                    name: profileData.name,
+                    avatarData: profileData.avatarData,
+                    birthday: profileData.birthday,
+                    bio: profileData.bio,
+                    gradientColors: gradientColors
+                )
+                await DataStore.shared.setUserProfile(profile)
+                modelContext.insert(profile)
+            }
+            await MainActor.run {
+                isEditingDisplay = false
+            }
+        }
+    }
+    
+    private func cancelDisplayChanges() {
+        // Reload original gradient colors
+        Task {
+            await loadProfile()
+            await MainActor.run {
+                isEditingDisplay = false
+            }
+        }
     }
 
     private func loadTransferable(from imageSelection: PhotosPickerItem) {
@@ -138,23 +213,23 @@ struct ProfileView: View {
         }
     }
 
-    private func saveProfile() {
+    private func saveProfile(profile: UserProfile, avatar: AvatarImage?) {
         isLoading = true
 
         Task {
-            let profile = UserProfile(
-                name: name.sanitize(),
-                avatarData: avatarImage?.data,
-                birthday: birthday,
-                bio: bio.isEmpty ? nil : bio
-            )
-
             await DataStore.shared.setUserProfile(profile)
             modelContext.insert(profile)
 
             await MainActor.run {
-                isLoading = false
-                isEditing = false
+                // Update local state
+                self.name = profile.name
+                self.birthday = profile.birthday
+                self.bio = profile.bio ?? ""
+                self.avatarImage = avatar
+                self.gradientColors = profile.gradientColors
+                
+                self.isLoading = false
+                self.isEditing = false
             }
         }
     }
@@ -177,6 +252,7 @@ struct ProfileView: View {
                 self.name = profileData.name
                 self.birthday = profileData.birthday
                 self.bio = profileData.bio ?? ""
+                self.gradientColors = profileData.gradientColors
                 self.isLoading = false
                 print("✅ [Profile] Profile state updated")
             }
@@ -184,6 +260,121 @@ struct ProfileView: View {
             print("⚠️ [Profile] No local profile found")
             await MainActor.run { isLoading = false }
         }
+    }
+}
+
+// MARK: - Display Color Picker Sheet
+
+private struct DisplayColorPickerSheet: View {
+    @Binding var gradientColors: [Color]
+    @State private var selectedColors: [Color] = []
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    private let availableColors: [Color] = [
+        .red, .orange, .yellow, .green, .cyan, .blue, .indigo, .purple, .pink,
+        .mint, .teal, .brown, .white, .black, .gray
+    ]
+    
+    init(gradientColors: Binding<[Color]>) {
+        self._gradientColors = gradientColors
+        // Extract the two unique colors from the gradient
+        _selectedColors = State(initialValue: Array(Set(gradientColors.wrappedValue)).prefix(2).map { $0 })
+    }
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 20) {
+                Text("Select 2 Colors")
+                    .font(.headline)
+                    .padding(.top)
+                
+                Text("Choose two colors for your gradient")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                // Live preview
+                ZStack {
+                    AnimatedMeshGradient(
+                        colors: selectedColors.count == 2 ? (0..<9).map { selectedColors[$0 % 2] } : gradientColors,
+                        animationStyle: .horizontalWave,
+                        duration: 3.0
+                    )
+                    .frame(height: 120)
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 16) {
+                    ForEach(availableColors, id: \.self) { color in
+                        Button(action: {
+                            toggleColorSelection(color)
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(color)
+                                    .frame(width: 60, height: 60)
+                                
+                                if selectedColors.contains(color) {
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: 4)
+                                        .frame(width: 60, height: 60)
+                                    
+                                    if let index = selectedColors.firstIndex(of: color) {
+                                        Text("\(index + 1)")
+                                            .font(.system(size: 24, weight: .bold))
+                                            .foregroundColor(.white)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding()
+                
+                Spacer()
+                
+                Button(action: {
+                    applyColors()
+                }) {
+                    Text("Apply")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(selectedColors.count == 2 ? Color.blue : Color.gray)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .disabled(selectedColors.count != 2)
+                .padding()
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+    
+    private func toggleColorSelection(_ color: Color) {
+        if let index = selectedColors.firstIndex(of: color) {
+            selectedColors.remove(at: index)
+        } else if selectedColors.count < 2 {
+            selectedColors.append(color)
+        } else {
+            // Replace the first color if already have 2 selected
+            selectedColors[0] = selectedColors[1]
+            selectedColors[1] = color
+        }
+    }
+    
+    private func applyColors() {
+        gradientColors = (0..<9).map { selectedColors[$0 % 2] }
+        dismiss()
     }
 }
 

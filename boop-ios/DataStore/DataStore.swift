@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// Unified data store providing a single interface for accessing user data
 /// Internally uses UserDefaults for persistence with optional in-memory caching
@@ -36,6 +37,10 @@ actor DataStore {
 
         if let bio = UserDefaults.standard.string(forKey: UserDefaultsKeys.bio) {
             cache[UserDefaultsKeys.bio] = bio
+        }
+        
+        if let gradientColors = UserDefaults.standard.array(forKey: UserDefaultsKeys.gradientColors) as? [String] {
+            cache[UserDefaultsKeys.gradientColors] = gradientColors
         }
 
         cache[UserDefaultsKeys.profileComplete] = UserDefaults.standard.bool(forKey: UserDefaultsKeys.profileComplete)
@@ -76,7 +81,15 @@ actor DataStore {
         }
         return UserDefaults.standard.string(forKey: UserDefaultsKeys.bio)
     }
-
+    
+    /// Returns the user's gradient colors if available
+    func getGradientColors() async -> [String]? {
+        if let cached = cache[UserDefaultsKeys.gradientColors] as? [String] {
+            return cached
+        }
+        return UserDefaults.standard.array(forKey: UserDefaultsKeys.gradientColors) as? [String]
+    }
+    
     /// Returns whether the user's profile setup is complete
     func isProfileComplete() async -> Bool {
         if let cached = cache[UserDefaultsKeys.profileComplete] as? Bool {
@@ -100,11 +113,13 @@ actor DataStore {
         let avatarData = await getAvatarData()
         let birthday = await getBirthday()
         let bio = await getBio()
+        let gradientColors = await getGradientColors() ?? []
         let userProfileData = UserProfileData(
             name: name,
             avatarData: avatarData,
             birthday: birthday,
-            bio: bio
+            bio: bio,
+            gradientColorsData: gradientColors
         )
         print("Constructed user profile data. Display Name: \(userProfileData.displayName)")
         return userProfileData
@@ -124,6 +139,7 @@ actor DataStore {
         if let bio = profile.bio {
             UserDefaults.standard.set(bio, forKey: UserDefaultsKeys.bio)
         }
+        UserDefaults.standard.set(profile.gradientColorsData, forKey: UserDefaultsKeys.gradientColors)
 
         // Update cache
         cache[UserDefaultsKeys.name] = profile.name
@@ -136,6 +152,7 @@ actor DataStore {
         if let bio = profile.bio {
             cache[UserDefaultsKeys.bio] = bio
         }
+        cache[UserDefaultsKeys.gradientColors] = profile.gradientColorsData
     }
 
     // MARK: - Individual Setters
@@ -185,8 +202,32 @@ struct UserProfileData {
     let avatarData: Data?
     let birthday: Date?
     let bio: String?
+    let gradientColorsData: [String]
 
     var displayName: String {
         "\(name)"
+    }
+    
+    var gradientColors: [Color] {
+        gradientColorsData.compactMap { colorString in
+            switch colorString {
+            case "red": return .red
+            case "orange": return .orange
+            case "yellow": return .yellow
+            case "green": return .green
+            case "cyan": return .cyan
+            case "blue": return .blue
+            case "indigo": return .indigo
+            case "purple": return .purple
+            case "pink": return .pink
+            case "mint": return .mint
+            case "teal": return .teal
+            case "brown": return .brown
+            case "white": return .white
+            case "black": return .black
+            case "gray": return .gray
+            default: return nil
+            }
+        }
     }
 }
