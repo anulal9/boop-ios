@@ -16,7 +16,7 @@ struct RootView: View {
                 if isProfileLoaded {
                     MainTabView()
                 } else {
-                    ProfileSetupView(isSetupMode: true, onProfileUpdated: {
+                    ProfileSetupView(onProfileUpdated: {
                         self.isProfileLoaded = true
                     })
                 }

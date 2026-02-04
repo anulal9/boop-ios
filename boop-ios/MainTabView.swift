@@ -2,8 +2,6 @@ import SwiftUI
 
 /// Root tab view for authenticated users
 struct MainTabView: View {
-    @State private var refreshTrigger = UUID()
-    
     var body: some View {
         TabView {
             BoopTimelineView()
@@ -16,13 +14,7 @@ struct MainTabView: View {
                     Label("Contacts", systemImage: "person.2")
                 }
 
-            ProfileSetupView(
-                isSetupMode: false,
-                onProfileUpdated: {
-                    refreshTrigger = UUID()
-                }
-            )
-            .id(refreshTrigger)
+            ProfileView()
             .tabItem {
                 Label("You", systemImage: "person.crop.circle")
             }

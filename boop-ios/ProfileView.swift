@@ -1,25 +1,33 @@
 import SwiftUI
 import PhotosUI
 
-struct ProfileSetupView: View {
+struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var name = ""
     @State private var birthday: Date?
+    @State private var bio = ""
+    @State private var isLoading = false
 
     @State private var imageSelection: PhotosPickerItem?
     @State private var avatarImage: AvatarImage?
 
-    let onProfileUpdated: (() -> Void)?
-
     var canSubmit: Bool {
-        !name.isEmptyAfterSanitizing && birthday != nil
+        !name.isEmptyAfterSanitizing
     }
 
     var body: some View {
         NavigationView {
-            ZStack(alignment: .bottom) {
-                Form {
+            Group {
+                if isLoading {
+                    VStack {
+                        ProgressView()
+                        Text("Loading profile...")
+                            .subtitleStyle()
+                    }
+                } else {
+                    ZStack(alignment: .bottom) {
+                        Form {
                             Section {
                                 ProfilePhotoSelector(
                                     imageSelection: $imageSelection,
@@ -34,11 +42,13 @@ struct ProfileSetupView: View {
                                 StyledTextField(placeholder: "Name", text: $name)
                                     .listRowSeparator(.hidden)
                                 DatePickerField(
-                                    title: "Set birthday",
+                                    title: "Birthday",
                                     placeholder: "Add birthday",
                                     info: "Your birth year is kept private",
                                     selectedDate: $birthday
                                 )
+                                .listRowSeparator(.hidden)
+                                StyledTextField(placeholder: "Bio", text: $bio)
                                     .listRowSeparator(.hidden)
                             }
                             
@@ -54,20 +64,33 @@ struct ProfileSetupView: View {
                         }
                         
                         if canSubmit {
-                            Button(action: saveProfile) {
-                                Text("Continue")
+                            VStack {
+                                Button(action: saveProfile) {
+                                    if isLoading {
+                                        ProgressView()
+                                    } else {
+                                        Text("Save")
+                                    }
+                                }
+                                .disabled(isLoading)
+                                .frame(maxWidth: .infinity)
+                                .padding()
                             }
-                            .frame(maxWidth: .infinity)
-                            .padding()
+                            .background(Color(uiColor: .systemBackground))
+                            .ignoresSafeArea(.keyboard, edges: .bottom)
                         }
                     }
                     .pageBackground()
                 }
             }
+            .navigationTitle("You")
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: imageSelection) { _, newValue in
                 guard let newValue else { return }
                 loadTransferable(from: newValue)
+            }
+            .task {
+                await loadProfile()
             }
         }
         .pageBackground()
@@ -84,27 +107,54 @@ struct ProfileSetupView: View {
     }
 
     private func saveProfile() {
+        isLoading = true
+
         Task {
             let profile = UserProfile(
                 name: name.sanitize(),
                 avatarData: avatarImage?.data,
                 birthday: birthday,
-                bio: nil
+                bio: bio.isEmpty ? nil : bio
             )
 
+            await DataStore.shared.setUserProfile(profile)
             modelContext.insert(profile)
 
-            await DataStore.shared.setUserProfile(profile)
-            await DataStore.shared.setProfileComplete(true)
+            await MainActor.run {
+                isLoading = false
+            }
+        }
+    }
+
+    private func loadProfile() async {
+        await MainActor.run { isLoading = true }
+
+        if let profileData = await DataStore.shared.getUserProfile() {
+            print("✅ [Profile] Local profile loaded")
+
+            if let avatarData = profileData.avatarData,
+               let uiImage = UIImage(data: avatarData) {
+                let image = Image(uiImage: uiImage)
+                await MainActor.run {
+                    self.avatarImage = AvatarImage(image: image, data: avatarData)
+                }
+            }
 
             await MainActor.run {
-                onProfileUpdated?()
+                self.name = profileData.name
+                self.birthday = profileData.birthday
+                self.bio = profileData.bio ?? ""
+                self.isLoading = false
+                print("✅ [Profile] Profile state updated")
             }
+        } else {
+            print("⚠️ [Profile] No local profile found")
+            await MainActor.run { isLoading = false }
         }
     }
 }
 
 #Preview {
-    ProfileSetupView(onProfileUpdated: {})
+    ProfileView()
         .modelContainer(for: UserProfile.self, inMemory: true)
 }
