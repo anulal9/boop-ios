@@ -56,33 +56,12 @@ struct ProfileView: View {
     private var displayModeView: some View {
         Form {
             Section {
-                VStack {
-                    if let avatarImage = avatarImage {
-                        avatarImage.image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 100, height: 100)
-                            .clipShape(Circle())
-                            .frame(maxWidth: .infinity)
-                    } else {
-                        Image(systemName: "person.circle.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 100, height: 100)
-                            .foregroundColor(.gray)
-                            .frame(maxWidth: .infinity)
-                    }
-                    Text(name)
-                        .foregroundColor(.white)
-                    if let birthday = birthday {
-                        Text(birthday.formatted(.dateTime.month().day()))
-                            .foregroundColor(.white)
-                    }
-                    if !bio.isEmpty {
-                        Text(bio)
-                            .foregroundColor(.white)
-                    }
-                }
+                ProfileDisplayCard(
+                    avatarImage: avatarImage?.image,
+                    displayName: name,
+                    birthday: birthday,
+                    bio: bio.isEmpty ? nil : bio
+                )
             }
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())

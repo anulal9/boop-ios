@@ -14,50 +14,12 @@ struct ContactDetailView: View {
         NavigationView {
             Form {
                 Section {
-                    VStack(spacing: Spacing.lg) {
-                        // Avatar
-                        if let avatarData = contact.avatarData,
-                           let uiImage = UIImage(data: avatarData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 100, height: 100)
-                                .clipShape(Circle())
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            Image(systemName: "person.circle.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 100, height: 100)
-                                .foregroundColor(.gray)
-                                .frame(maxWidth: .infinity)
-                        }
-                        
-                        // Display Name
-                        Text(contact.displayName)
-                            .heading1Style()
-                            .foregroundColor(.white)
-                        
-                        // Birthday
-                        if let birthday = contact.birthday {
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: "birthday.cake")
-                                    .foregroundColor(.accentPrimary)
-                                Text(birthday.formatted(.dateTime.month().day()))
-                                    .subtitleStyle()
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        
-                        // Bio
-                        if let bio = contact.bio, !bio.isEmpty {
-                            Text(bio)
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                                .padding(.top, Spacing.sm)
-                        }
-                    }
-                    .padding(.vertical, Spacing.lg)
+                    ProfileDisplayCard(
+                        avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
+                        displayName: contact.displayName,
+                        birthday: contact.birthday,
+                        bio: contact.bio
+                    )
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
