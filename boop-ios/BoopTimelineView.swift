@@ -15,6 +15,7 @@ struct BoopTimelineView: View {
     private var allInteractions: [BoopInteraction]
     @Query private var contacts: [Contact]
     @State private var showBoop = false
+    @State private var showAddManualBoop = false
     @State private var currentBoopDisplayName: String = ""
 
     private let animationDuration: TimeInterval = 2
@@ -45,14 +46,6 @@ struct BoopTimelineView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                Group {
-                    Text("Timeline")
-                        .primaryTextStyle()
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }.frame(height: ComponentSize.pageHeaderHeight)
-
-                Spacer()
-
                 LazyVStack(spacing: Spacing.md) {
                     ForEach(Array(allInteractions.enumerated()), id: \.element.id) { index, interaction in
                         // Show header if this is the first item or the header changed from previous
@@ -78,6 +71,24 @@ struct BoopTimelineView: View {
                 .scrollContentBackground(Visibility.hidden)
             }
             .pageBackground()
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Timeline")
+                        .heading1Style()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showAddManualBoop = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: IconSize.standard, weight: .semibold))
+                            .foregroundColor(.accentPrimary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddManualBoop) {
+                AddManualBoopView()
+            }
             .overlay {
                 if showBoop {
                     ZStack {

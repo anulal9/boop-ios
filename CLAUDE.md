@@ -240,53 +240,262 @@ This ensures:
 
 ## Architecture
 
-### Core Services
+### Directory Structure
 
-**BoopManager** (`BoopManager.swift`)
-- Orchestrates the entire boop interaction flow
-- Maintains queue of devices in boop range (≤10cm)
-- Tracks mutual selection state between users
-- Implements `BoopDelegate` for event broadcasting
-- Publishes `latestBoopEvent` for UI updates
-
-**BluetoothManager** (`Bluetooth/BluetoothManager.swift`)
-- Dual-mode BLE (simultaneous peripheral + central)
-- Automatic connection management
-- UWB token exchange coordination
-- Distance categorization (InRange, ApproxTouching, OutOfRange)
-- Service UUID: `D3A42A7C-DA0E-4D2C-AAB1-88C77E018A5F`
-
-**UWBManager** (`Bluetooth/UWBManager.swift`)
-- Precise distance measurement via NISession
-- Thresholds: 5cm (touching), 50cm (max range)
-- Direction measurement when supported
-
-### UI Architecture
-
-**Main Navigation Flow:**
 ```
-RootView → checks profile → MainTabView
-                           ├── BoopTimelineView (chronological feed)
-                           ├── ContactsView (saved contacts)
-                           └── ProfileSetupView (user profile)
+boop-ios/                              # Source root
+├── boop_iosApp.swift                  # App entry point, ModelContainer setup
+├── RootView.swift                     # Auth routing (profile check)
+├── MainTabView.swift                  # 3-tab navigation
+├── BoopTimelineView.swift             # Timeline feed
+├── BoopRangingView.swift              # BLE scanning UI
+├── ContactsView.swift                 # Contacts list
+├── ContactDetailView.swift            # Contact detail sheet
+├── ProfileView.swift                  # Profile display/edit
+├── ProfileSetupView.swift             # Onboarding flow
+├── AddManualBoopView.swift            # Manual boop entry sheet
+├── BoopManager.swift                  # Orchestration layer
+├── StorageCoordinator.swift           # Async storage init
+├── Bluetooth/
+│   ├── BluetoothManager.swift         # BLE coordinator
+│   ├── BluetoothManagerService.swift  # Central + Peripheral implementation
+│   ├── UWBManager.swift               # UWB ranging (per-device NISession)
+│   └── UWBService.swift               # Distance threshold logic
+├── DataStore/
+│   └── DataStore.swift                # UserDefaults actor with caching
+├── DesignSystem/
+│   ├── Colors+DesignSystem.swift
+│   ├── Typography+DesignSystem.swift
+│   ├── Spacing+DesignSystem.swift
+│   ├── Sizes+DesignSystem.swift
+│   ├── Radius+DesignSystem.swift
+│   └── ViewModifiers+DesignSystem.swift
+├── Components/
+│   ├── BoopInteractionCard.swift      # Timeline card
+│   ├── ContactInteractionCard.swift   # Contact list card
+│   ├── ProfileDisplayCard.swift
+│   └── Gradient/
+│       ├── AnimatedMeshGradient.swift  # 3x3 MeshGradient animation
+│       ├── StyledTextField.swift
+│       ├── DatePickerField.swift
+│       └── ProfilePhotoSelector.swift
+├── model/
+│   ├── Contact.swift                  # @Model
+│   ├── UserProfile.swift              # @Model
+│   ├── BoopInteraction.swift          # @Model
+│   ├── Boop.swift                     # Value type for boop data
+│   ├── BoopEvent.swift                # Boop + timestamp wrapper
+│   ├── BluetoothMessage.swift         # Binary BLE protocol
+│   ├── NearbyDevice.swift
+│   ├── ConnectionRequest.swift
+│   ├── ConnectionResponse.swift
+│   ├── AvatarImage.swift
+│   └── BoopLiveActivityAttributes.swift
+├── UserDefaults/
+│   ├── UserDefaultsKeys.swift
+│   └── UserDefaultsUtility.swift
+└── Utilities/
+    ├── LiveActivityManager.swift
+    └── StringSanitization.swift
 ```
 
-**Timeline View** (`BoopTimelineView.swift`)
-- Displays all boop interactions chronologically
-- Dynamic time-based section headers
-- Auto-updating timestamps
-- Animated boop notifications via `BoopManager` events
-- Vertical spacing: `Spacing.md` (12pt) between cards
-- Horizontal padding: `Spacing.lg` (16pt) from edges
+### Persisted Data Store
 
-### Data Layer
+The app uses **two persistence layers**: SwiftData for relational data and UserDefaults for user profile quick-access.
 
-**SwiftData Models:**
-- `Contact`: Stores contact info and relationship to interactions
-- `UserProfile`: User's name and avatar
-- `BoopInteraction`: Individual boop records with timestamp, location, photos
+#### SwiftData Models
 
-**Important:** All stored properties in `@Model` classes must use `var` (not `let`) for Swift 6 compatibility, even if logically immutable.
+**`Contact`** (`model/Contact.swift`)
+- `uuid: UUID` — remote device's UUID
+- `displayName: String`, `avatarData: Data?`, `birthday: Date?`, `bio: String?`
+- `gradientColorsData: [String]` — colors stored as strings, converted via `colorToString()`/`stringToColor()`
+- `@Relationship(deleteRule: .cascade, inverse: \BoopInteraction.contact) var interactions: [BoopInteraction]` — one-to-many, cascade delete
+
+**`BoopInteraction`** (`model/BoopInteraction.swift`)
+- `id: UUID`, `title: String`, `location: String`, `timestamp: Date`
+- `imageData: [Data]` — photo attachments
+- `contact: Contact?` — inverse relationship back to Contact
+
+**`UserProfile`** (`model/UserProfile.swift`)
+- `name: String`, `createdAt: Date`, `avatarData: Data?`, `birthday: Date?`, `bio: String?`
+- `gradientColorsData: [String]` — same color storage pattern as Contact
+
+**Critical rule:** All `@Model` stored properties must be `var` (not `let`) for Swift 6 compatibility.
+
+#### ModelContainer Setup (`boop_iosApp.swift`)
+
+```
+Schema: [Contact, UserProfile, BoopInteraction]
+```
+
+The app entry point creates the `ModelContainer` asynchronously after `StorageCoordinator` finishes directory setup. A loading screen shows until the container is ready, then `RootView` receives it via `.modelContainer()`.
+
+#### DataStore Actor (`DataStore/DataStore.swift`)
+
+A Swift `actor` providing thread-safe UserDefaults access with in-memory caching for user profile data. Key methods:
+- `warmup()` — preloads profile data on app init
+- `getUserProfile()` → `UserProfileData` DTO
+- `setUserProfile(_ profile: UserProfile)` — writes to both cache and UserDefaults
+- `isProfileComplete()` / `setProfileComplete()`
+
+#### StorageCoordinator (`StorageCoordinator.swift`)
+
+An `actor` that coordinates async initialization of the SwiftData directory. Uses checked continuations to block ModelContainer creation until the storage directory exists, preventing race conditions.
+
+### Bluetooth
+
+#### BluetoothManager (`Bluetooth/BluetoothManager.swift`, `@MainActor`)
+
+Top-level BLE coordinator. Owns the `BluetoothManagerServiceImpl` (central + peripheral) and `UWBManager`.
+
+- `start()` / `stop()` — starts/stops BLE advertising, scanning, and UWB
+- `getNearbyDevices()` → `[UUID: DevicePositionCategory]`
+- `sendMessage()` / `sendPresence()` — sends BLE messages to specific devices
+- `localDeviceUUID` — persisted in UserDefaults, stable across sessions
+- Publishes `nearbyDevices` from UWBManager's Combine publisher
+
+#### BluetoothManagerService (`Bluetooth/BluetoothManagerService.swift`, `@MainActor`)
+
+Implements **dual-mode BLE** — the device acts as both peripheral (advertising) and central (scanning) simultaneously.
+
+**Service UUIDs:**
+```
+Service:     D3A42A7C-DA0E-4D2C-AAB1-88C77E018A5F
+Message:     D3A42A7D-... (.write, .notify)
+UWB Token:   D3A42A7E-... (.read, .write)
+Token ACK:   D3A42A7F-... (.notify)
+```
+
+**Binary Protocol (`BluetoothMessage`):**
+```
+[UUID: 16 bytes][MessageType: 1 byte][DisplayNameLength: 1 byte]
+[DisplayName: variable][PayloadLength: 2 bytes][Payload: variable]
+```
+
+**Message Types:**
+- `0x01` connectionRequest, `0x02` accept, `0x03` reject, `0x05` disconnect
+- `0x06` boop (mutual boop confirmed)
+- `0x07` boopRequest (user selected device)
+- `0x08` presence (name/profile announcement)
+
+**Delegates:**
+- `BluetoothServiceDelegate` — connection events, UWB token exchange
+- `BoopDelegate` — boop/request/presence received callbacks
+
+#### UWBManager (`Bluetooth/UWBManager.swift`, `@MainActor`)
+
+**Per-device NISession architecture** — each connected peer gets its own `NISession` instance.
+
+**Distance Thresholds:**
+- ≤ 5cm → `ApproxTouching` (boop range)
+- ≤ 50cm → `InRange` (nearby)
+- \> 50cm → `OutOfRange`
+
+**Flow:** Discovery tokens are exchanged via BLE characteristics. Once both peers have each other's token, ranging begins via `NINearbyPeerConfiguration`. Distance updates publish to `nearbyDevices: [UUID: DevicePositionCategory]` via Combine.
+
+### BoopManager — Orchestration (`BoopManager.swift`, `@MainActor`)
+
+Central orchestrator tying BLE + UWB + UI together. Injected as `@StateObject` at the app root and passed via `@EnvironmentObject`.
+
+**Key Published State:**
+- `latestBoopEvent: BoopEvent?` — triggers timeline overlay animation on new boops
+- `mySelections: Set<UUID>` / `theirSelections: Set<UUID>` — mutual selection tracking
+- `displayNames: [UUID: String]` — maps peer UUIDs to display names
+
+**Mutual Boop Flow:**
+1. User taps a device → `selectDevice(deviceID)` adds to `mySelections`, sends `.boopRequest`
+2. Remote peer does the same → `didReceiveBoopRequest` adds to `theirSelections`
+3. `checkForMutualSelection()` detects both sets contain the peer
+4. Sends `.boop` message, clears selections, creates `BoopEvent`
+5. `latestBoopEvent` triggers UI overlay + SwiftData persistence in `BoopTimelineView`
+
+**Observer Pattern:** Subscribes to `bluetoothManager.nearbyDevices` publisher. On device discovery, sends presence. On disconnect, cleans up selections.
+
+### View + Model Pattern
+
+#### Navigation Structure
+
+```
+boop_iosApp (ModelContainer + BoopManager)
+  └─ RootView (checks if profile exists)
+       ├─ ProfileSetupView (onboarding, requireAllFields=true)
+       └─ MainTabView
+            ├─ Tab 1: BoopTimelineView
+            │    ├─ Toolbar: "+" → AddManualBoopView (sheet)
+            │    ├─ @Query BoopInteraction (sorted by timestamp desc)
+            │    └─ NavigationLink → interaction detail
+            ├─ Tab 2: ContactsView
+            │    ├─ Toolbar: "+" → BoopRangingView (sheet)
+            │    ├─ @Query Contact
+            │    └─ Tap → ContactDetailView (sheet)
+            └─ Tab 3: ProfileView
+                 ├─ Display mode (gradient bg + profile card)
+                 ├─ Edit mode (ProfileSetupView, requireAllFields=false)
+                 └─ Customize mode (color picker)
+```
+
+#### State Management Patterns
+
+- **`@Query`** — Views subscribe to SwiftData queries for automatic UI updates when models change
+- **`@Environment(\.modelContext)`** — Used for inserts and deletes
+- **`@EnvironmentObject`** — `BoopManager` injected at app root, available in all views
+- **`@StateObject`** — `BoopManager` lifecycle owned by `boop_iosApp`
+- **`@Published`** — Manager properties that drive UI (selections, display names, events)
+- **`@State`** — Local UI state (sheet presentation, editing mode, form fields)
+
+#### Data Flow: Boop → Timeline
+
+1. UWB detects touching distance → BLE exchanges mutual boop messages
+2. `BoopManager.didReceiveBoop()` creates `BoopEvent`, sets `latestBoopEvent`
+3. `BoopTimelineView.onChange(of: latestBoopEvent)` fires `handleNewBoop()`
+4. `handleNewBoop()` finds/creates `Contact`, creates `BoopInteraction`, inserts into `modelContext`
+5. `@Query` automatically picks up the new interaction → UI updates
+
+#### Card Components
+
+- **`BoopInteractionCard`** — timeline items with title, location, relative time, overlapping thumbnails. Uses `TimelineView(.periodic(by: 60))` for auto-refreshing timestamps.
+- **`ContactInteractionCard`** — contact list items with name, boop count, last boop time
+- **`AnimatedMeshGradient`** — 3x3 MeshGradient with configurable wave animation (vertical/horizontal), used for profile backgrounds
+
+### Design System
+
+All design tokens live in `DesignSystem/`. Never hardcode visual values — always use the token enums.
+
+#### Colors (`Colors+DesignSystem.swift`)
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `backgroundPrimary` | #130914 | Page backgrounds |
+| `backgroundSecondary` | #1d0f22 | Card backgrounds |
+| `formBackgroundInactive` | #342d39 | Form field backgrounds |
+| `textPrimary` | #ffffff | Primary text |
+| `textSecondary` | #f4d9f2 | Card titles, subtitles |
+| `textMuted` | #b28bb8 | Section headers, captions |
+| `textOnAccent` | #130914 | Text on accent buttons |
+| `accentPrimary` | #ff7aa2 | Buttons, links, tint |
+| `accentSecondary` | #3a1e3f | Selected/highlighted state |
+| `accentTertiary` | #4ec8f4 | Secondary accent |
+
+#### Typography (`Typography+DesignSystem.swift`)
+
+| Font | Weight | Size | Line Height |
+|------|--------|------|-------------|
+| `.primary` | Bold | 32pt | 1.1 |
+| `.heading1` | Semibold | 28pt | 1.13 |
+| `.heading2` | Semibold | 24pt | 1.1 |
+| `.subtitle` | Regular | 14pt | 1.43 |
+
+#### Spacing, Radius, Sizes
+
+See [Spacing Values](#spacing-values) above. Corner radii: `sm` 4pt, `md` 8pt, `lg` 12pt, `xl` 16pt.
+
+#### View Modifiers (`ViewModifiers+DesignSystem.swift`)
+
+**Typography:** `.primaryTextStyle()`, `.heading1Style()`, `.heading2Style()`, `.subtitleStyle()`, `.errorTextStyle()`, `.successTextStyle()`
+
+**Containers:** `.cardStyle()` (backgroundSecondary + cornerRadius.md), `.pageBackground()` (backgroundPrimary), `.sectionContainer()` (standard padding)
+
+**Interactive:** `.iconButtonStyle()` (44pt circle), `.primaryButtonStyle()` (full-width accent button)
 
 ## Swift 6 & Language Features
 
