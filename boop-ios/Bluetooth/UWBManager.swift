@@ -1,39 +1,32 @@
 import Foundation
+import Combine
 import NearbyInteraction
 
 // MARK: - Protocol for Dependency Injection
+@MainActor
 protocol UWBManaging: AnyObject {
-    /// Determines if another device is nearby based on distance only (no angle checking)
-    /// **Detection**: Uses UWB distance measurement only (≤50cm)
-    /// - Parameter deviceID: The UUID of the device to check
-    /// - Returns: True if device is within proximity range, regardless of pointing direction
-    func isNearby(deviceID: UUID) -> Bool
-
-    /// Determines if devices are approximately touching (≤10cm)
-    /// **Detection**: Distance ≤10cm only (no directional checks)
-    /// **Use case**: Physical "boop" interaction between devices
-    /// - Parameter deviceID: The UUID of the device to check
-    /// - Returns: True if devices are within touching distance
-    func isApproximatelyTouching(deviceID: UUID) -> Bool
-
+    
+    func stopRangingForAllDevices()
+    
     /// Start UWB ranging session with a peer
-    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken)
+    func startRanging(to deviceID: UUID)
 
     /// Stop UWB ranging session with a peer
     func stopRanging(to deviceID: UUID)
     
-    func setUpDelegate(uwbManagerDelegate: UWBManagerDelegate)
+    func registerPeer(to deviceID: UUID)
     
+    func getDiscoveryTokenForDeviceSession(for deviceID: UUID) -> Data?
+
     /// Add discovery token for this peer
     func registerPeerDiscoveryToken(from device: UUID, token: NIDiscoveryToken)
 
-    /// Get the current discovery token for this device
-    var discoveryToken: NIDiscoveryToken? { get }
+    /// Check if UWB ranging is currently active for a given peer
+    func isRanging(to deviceID: UUID) -> Bool
     
-}
-
-protocol UWBManagerDelegate: AnyObject {
-    func onNearbyObjectsUpdate(updatedObject: UUID) async
+    var nearbyDevices: [UUID: DevicePositionCategory] { get }
+    
+    var nearbyDevicesPublisher: AnyPublisher<[UUID: DevicePositionCategory], Never> { get }
 }
 
 enum DevicePositionCategory: UInt8 {
@@ -44,7 +37,18 @@ enum DevicePositionCategory: UInt8 {
 }
 
 // MARK: - UWB Manager Implementation
+@MainActor
 class UWBManager: NSObject, UWBManaging {
+    
+    var discoveryTokens: NIDiscoveryToken?
+    
+    
+    @Published var nearbyDevices: [UUID: DevicePositionCategory] = [:]
+    private var devicesWithUWBRanging: Set<UUID> = []
+    
+    var nearbyDevicesPublisher: AnyPublisher<[UUID : DevicePositionCategory], Never> {
+        $nearbyDevices.eraseToAnyPublisher()
+    }
 
     // MARK: - Configuration
     private struct DistanceThresholds {
@@ -53,168 +57,149 @@ class UWBManager: NSObject, UWBManaging {
     }
 
     // MARK: - Properties
-    private var niSession: NISession?
+    private var deviceToNISession: [UUID: NISession] = [:]
     private var nearbyObjects: [UUID: NINearbyObject] = [:]
     private var deviceTokens: [UUID: NIDiscoveryToken] = [:]
-    private var uwbManagerDelegate: UWBManagerDelegate? = nil
-
-    var discoveryToken: NIDiscoveryToken? {
-        return niSession?.discoveryToken
-    }
-    
-    init(managerDelegate: UWBManagerDelegate) {
-        self.uwbManagerDelegate = managerDelegate
-        super.init()
-        setupSession()
-    }
+    private var uwbService: IUWBService
 
     // MARK: - Init
     override init() {
+        self.uwbService = UWBService()
         super.init()
-        setupSession()
     }
-
-    // MARK: - Setup
-    private func setupSession() {
-        guard NISession.isSupported else {
-            print("❌ UWB: NISession is NOT SUPPORTED on this device")
-            return
-        }
-        
-        guard niSession == nil else {
-            print("UWB: NISession already exists, skipping setup")
+    
+    func registerPeer(to deviceID: UUID) {
+        guard deviceToNISession[deviceID] == nil else {
+            print("UWB: NISession for device \(deviceID) already exists, skipping setup")
             return
         }
 
-        niSession = NISession()
-        niSession?.delegate = self
+        let niSession = NISession()
+        niSession.delegate = self
         
-        if let token = niSession?.discoveryToken {
+        if let token = niSession.discoveryToken {
             print("✅ UWB: Session initialized successfully")
             print("📍 UWB: Discovery token available (size: \(try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true).count) bytes)")
         } else {
             print("⚠️ UWB: Session initialized but NO DISCOVERY TOKEN available")
         }
+        deviceToNISession[deviceID] = niSession
     }
     
-    func setUpDelegate(uwbManagerDelegate managerDelegate: UWBManagerDelegate) {
-        uwbManagerDelegate = managerDelegate
+    func getDiscoveryTokenForDeviceSession(for deviceID: UUID) -> Data? {
+        guard let token = deviceToNISession[deviceID]?.discoveryToken else {
+            return nil
+        }
+        return try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true)
     }
+    
+
+    // MARK: - Setup
+    private func setupSession(to deviceID: UUID) {
+        guard NISession.isSupported else {
+            print("❌ UWB: NISession is NOT SUPPORTED on this device")
+            return
+        }
+        
+        guard deviceToNISession[deviceID] == nil else {
+            print("UWB: NISession for device \(deviceID) already exists, skipping setup")
+            return
+        }
+
+        let niSession = NISession()
+        niSession.delegate = self
+        
+        if let token = niSession.discoveryToken {
+            print("✅ UWB: Session initialized successfully")
+            print("📍 UWB: Discovery token available (size: \(try! NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true).count) bytes)")
+        } else {
+            print("⚠️ UWB: Session initialized but NO DISCOVERY TOKEN available")
+        }
+        deviceToNISession[deviceID] = niSession
+    }
+
     
     func registerPeerDiscoveryToken(from deviceID: UUID, token discoveryToken: NIDiscoveryToken) {
         self.deviceTokens[deviceID] = discoveryToken
     }
 
-    // MARK: - Public Methods
-    func isNearby(deviceID: UUID) -> Bool {
-        print("🔍 UWB: isNearby(\(deviceID.uuidString.prefix(8))) called")
-
-        guard let object = nearbyObjects[deviceID] else {
-            // No UWB data available for this device
-            print("❌ UWB: isNearby(\(deviceID.uuidString.prefix(8))) - NO UWB DATA (not in nearbyObjects)")
-            return false
-        }
-
-        // Check distance only - no angle requirements
-        guard let distance = object.distance else {
-            print("❌ UWB: isNearby(\(deviceID.uuidString.prefix(8))) - NO DISTANCE DATA")
-            return false
-        }
-
-        print("📏 UWB: isNearby(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max: \(DistanceThresholds.maxDistance)m)")
-
-        // Check distance bound - not too far
-        let isInRange = distance <= DistanceThresholds.maxDistance
-
-        if isInRange {
-            print("✅ UWB: isNearby(\(deviceID.uuidString.prefix(8))) - IN RANGE")
-        } else {
-            print("❌ UWB: isNearby(\(deviceID.uuidString.prefix(8))) - OUT OF RANGE")
-        }
-
-        return isInRange
+    func isRanging(to deviceID: UUID) -> Bool {
+        devicesWithUWBRanging.contains(deviceID)
     }
 
-    func isApproximatelyTouching(deviceID: UUID) -> Bool {
-        print("🔍 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) called")
-
-        guard let object = nearbyObjects[deviceID] else {
-            // No UWB data available for this device
-            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - NO UWB DATA (not in nearbyObjects)")
-            return false
-        }
-
-        // Check distance - must be within touching range
-        guard let distance = object.distance else {
-            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - NO DISTANCE DATA")
-            return false
-        }
-
-        print("📏 UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - distance: \(String(format: "%.3f", distance))m (max touching: \(DistanceThresholds.touchingDistance)m)")
-
-        // Check if within touching distance (5cm)
-        let isTouching = distance <= DistanceThresholds.touchingDistance
-
-        if isTouching {
-            print("✅ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - TOUCHING CONFIRMED")
-        } else {
-            print("❌ UWB: isApproximatelyTouching(\(deviceID.uuidString.prefix(8))) - TOO FAR (distance: \(String(format: "%.3f", distance))m > \(DistanceThresholds.touchingDistance)m)")
-        }
-
-        return isTouching
-    }
-    
-    func startRanging(peerToken: NIDiscoveryToken) {
-        setupSession() // Recreate for next use
+    func startRanging(to deviceID: UUID) {
         
         let caps = NISession.deviceCapabilities
         print("precise distance:", caps.supportsPreciseDistanceMeasurement)
         print("direction:", caps.supportsDirectionMeasurement)
-
-        guard let session = niSession else {
-            print("❌ UWB: Cannot start ranging - NISession is nil")
-            return
-        }
-
-        print("📍 UWB: NISession exists, storing token and creating config...")
-
+        
         print("📍 UWB: deviceTokens now has \(deviceTokens.count) token(s)")
         print("📍 UWB: nearbyObjects currently has \(nearbyObjects.count) object(s)")
-
+        
+        guard let peerToken = deviceTokens[deviceID] else {
+            print("📍 UWB: Cannot Range to device : \(deviceID); peer discovery token not found")
+            return
+        }
         let config = NINearbyPeerConfiguration(peerToken: peerToken)
         print("📍 UWB: Created NINearbyPeerConfiguration successfully")
 
-        session.run(config)
+        deviceToNISession[deviceID]?.run(config)
+        devicesWithUWBRanging.insert(deviceID)
         print("✅ UWB: Called session.run() - ranging started")
-        print("📍 UWB: Total devices in ranging: \(deviceTokens.count)")
+        print("📍 UWB: Total devices in ranging: \(devicesWithUWBRanging.count)")
     }
 
-    func startRanging(to deviceID: UUID, peerToken: NIDiscoveryToken) {
-        
-        deviceTokens[deviceID] = peerToken
-        startRanging(peerToken: peerToken)
-    }
 
     func stopRanging(to deviceID: UUID) {
+        let niSession = deviceToNISession[deviceID]
+        niSession?.invalidate()
+        deviceToNISession.removeValue(forKey: deviceID)
         deviceTokens.removeValue(forKey: deviceID)
         nearbyObjects.removeValue(forKey: deviceID)
-        niSession?.invalidate()
-        niSession = nil
+        nearbyDevices.removeValue(forKey: deviceID)
+        devicesWithUWBRanging.remove(deviceID)
 
         print("📍 UWB: Stopped ranging to \(deviceID.uuidString.prefix(8))")
+    }
+    
+    func stopRangingForAllDevices() {
+        deviceTokens.removeAll()
+        nearbyDevices.removeAll()
+        nearbyObjects.removeAll()
+        devicesWithUWBRanging.removeAll()
+        for (_, niSession) in deviceToNISession {
+            niSession.invalidate()
+        }
+        deviceToNISession.removeAll()
+        print("📍 UWB: Stopped ranging for all devices")
+    }
+    
+    
+    private func getPositionCategory(updatedObject: NINearbyObject) -> DevicePositionCategory{
+        var positionState = DevicePositionCategory.Unknown
+        if uwbService.isApproximatelyTouching(
+            nearbyObject: updatedObject) {
+            positionState = DevicePositionCategory.ApproxTouching
+        } else if uwbService.isNearby(nearbyObject: updatedObject) {
+            positionState = DevicePositionCategory.InRange
+        } else {
+            positionState = DevicePositionCategory.OutOfRange
+        }
+        return positionState
     }
 
     // MARK: - Helper
     private func deviceID(for token: NIDiscoveryToken) -> UUID? {
         return deviceTokens.first(where: { $0.value == token })?.key
     }
+    
+    private func deviceID(for session: NISession) -> UUID? {
+        return deviceToNISession.first(where: { $0.value == session })?.key
+    }
 
     // MARK: - Diagnostics
     func printDiagnostics() {
         print("🔍 UWB: === DIAGNOSTICS ===")
-        print("🔍 UWB: NISession supported: \(NISession.isSupported)")
-        print("🔍 UWB: NISession exists: \(niSession != nil)")
-        print("🔍 UWB: Discovery token exists: \(niSession?.discoveryToken != nil)")
         print("🔍 UWB: Device tokens count: \(deviceTokens.count)")
         print("🔍 UWB: Nearby objects count: \(nearbyObjects.count)")
         if !deviceTokens.isEmpty {
@@ -246,7 +231,17 @@ extension UWBManager: NISessionDelegate {
                 }
 
                 self.nearbyObjects[deviceID] = object
-                await self.uwbManagerDelegate?.onNearbyObjectsUpdate(updatedObject: deviceID)
+                let positionCategory = self.getPositionCategory(updatedObject: object)
+                
+                switch positionCategory {
+                    case DevicePositionCategory.ApproxTouching:
+                        nearbyDevices[deviceID] = DevicePositionCategory.ApproxTouching
+                    case DevicePositionCategory.InRange:
+                        nearbyDevices[deviceID] = DevicePositionCategory.InRange
+                        break
+                    default:
+                        self.stopRanging(to: deviceID)
+                }
 
                 if let distance = object.distance {
                     print("📏 UWB: UPDATE \(deviceID.uuidString.prefix(8)) - distance: \(String(format: "%.3f", distance))m")
@@ -266,6 +261,7 @@ extension UWBManager: NISessionDelegate {
                 }
 
                 self.nearbyObjects.removeValue(forKey: deviceID)
+                self.nearbyDevices.removeValue(forKey: deviceID)
                 print("📍 UWB: Lost connection to \(deviceID.uuidString.prefix(8)), reason: \(reason.rawValue)")
             }
             printDiagnostics()
@@ -275,9 +271,14 @@ extension UWBManager: NISessionDelegate {
     nonisolated func session(_ session: NISession, didInvalidateWith error: Error) {
         Task { @MainActor in
             print("⚠️ UWB: Session invalidated - \(error.localizedDescription)")
-            nearbyObjects.removeAll()
-            niSession = nil
-            printDiagnostics()
+            guard let disconnectedDeviceID = deviceID(for: session) else {
+                return
+            }
+            deviceToNISession.removeValue(forKey: disconnectedDeviceID)
+            nearbyObjects.removeValue(forKey: disconnectedDeviceID)
+            nearbyDevices.removeValue(forKey: disconnectedDeviceID)
+            deviceTokens.removeValue(forKey: disconnectedDeviceID)
+            devicesWithUWBRanging.remove(disconnectedDeviceID)
         }
     }
 
@@ -293,7 +294,7 @@ extension UWBManager: NISessionDelegate {
             print("✅ UWB: Session resumed")
             printDiagnostics()
             self.deviceTokens.forEach { (deviceId: UUID, token: NIDiscoveryToken) in
-                self.startRanging(to: deviceId, peerToken: token)
+                self.startRanging(to: deviceId)
             }
         }
     }
@@ -303,22 +304,7 @@ extension UWBManager: NISessionDelegate {
         Task { @MainActor in
             print("UWB: Session did start running")
             print("UWB: Session received by delegate callback: \(session)")
-            print("UWB: Session held by this device: \(niSession)")
             printDiagnostics()
-            if (niSession == nil) {
-                print("UWB: Setting session for this device")
-                niSession = session
-            }
-//            guard let peerToken = session.discoveryToken else {
-//                print("UWB: Could not find peer token for session")
-//                return
-//            }
-//            guard let peerDeviceID = deviceID(for: peerToken) else {
-//                print("UWB: Could not find device id for session token. ")
-//                self.startRanging(peerToken: peerToken)
-//                return
-//            }
-//            self.startRanging(to: peerDeviceID, peerToken: peerToken)
         }
     }
 }

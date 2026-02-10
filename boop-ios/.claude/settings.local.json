@@ -3,7 +3,14 @@
     "allow": [
       "Bash(find:*)",
       "Bash(xcodebuild:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:goshdarnformatstyle.com)",
+      "WebFetch(domain:gist.github.com)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

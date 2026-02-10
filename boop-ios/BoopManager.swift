@@ -43,11 +43,9 @@ class BoopManager: NSObject, ObservableObject {
 
     // MARK: - Init
     override init() {
-        self.bluetoothManager = BluetoothManager(uwbManager: UWBManager())
+        self.bluetoothManager = BluetoothManager()
         super.init()
         self.bluetoothManager.setBoopDelegate(self)
-        self.bluetoothManager.start()
-        setupObservers()
     }
     
     // MARK: - Setup
@@ -56,7 +54,7 @@ class BoopManager: NSObject, ObservableObject {
         var previousDevices = Set<UUID>()
 
         // Observe nearbyDevices changes to clean up selections when devices disappear
-        bluetoothManager.$nearbyDevices
+        bluetoothManager.nearbyDevices
             .sink { [weak self] devices in
                 guard let self = self else { return }
                 let deviceIDs = Set(devices.keys)
@@ -97,17 +95,26 @@ class BoopManager: NSObject, ObservableObject {
             }
             .store(in: &cancellables)
     }
+    
+    func start() {
+        setupObservers()
+        bluetoothManager.start()
+    }
+    
+    func stop() {
+        bluetoothManager.stop()
+    }
 
     // MARK: - Public Methods
 
     /// Get nearby devices with their display info
     func getNearbyDevices() -> [UUID: DevicePositionCategory] {
-        return bluetoothManager.nearbyDevices
+        return bluetoothManager.getNearbyDevices()
     }
 
     /// User selected a device to boop
     func selectDevice(_ deviceID: UUID) {
-        guard bluetoothManager.nearbyDevices[deviceID] != nil else {
+        guard bluetoothManager.getNearbyDevices()[deviceID] != nil else {
             print("⚠️ BoopManager: Cannot select device \(deviceID) - not nearby")
             return
         }
