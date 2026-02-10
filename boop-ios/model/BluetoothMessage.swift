@@ -198,7 +198,10 @@ struct BluetoothMessage {
         offset += 1
         
         if hasBirthday {
-            let timeIntervalBits = data.withUnsafeBytes { $0.load(fromByteOffset: offset, as: UInt64.self).bigEndian }
+            var timeIntervalBits: UInt64 = 0
+            for i in 0..<8 {
+                timeIntervalBits = (timeIntervalBits << 8) | UInt64(data[offset + i])
+            }
             let timeInterval = Double(bitPattern: timeIntervalBits)
             birthday = Date(timeIntervalSince1970: timeInterval)
         }
