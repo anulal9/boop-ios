@@ -32,6 +32,8 @@ class BoopManager: NSObject, ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
+    private var lastBoopTime: [UUID: Date] = [:]
+    private let boopCooldown: TimeInterval = 5.0  // Seconds before allowing another auto-boop
     private lazy var displayName: Task<String, Error> = {
         Task {
             if let profile = await DataStore.shared.getUserProfile() {
@@ -50,10 +52,11 @@ class BoopManager: NSObject, ObservableObject {
     
     // MARK: - Setup
     private func setupObservers() {
-        // Track previous devices to detect new ones
+        // Track previous devices and positions to detect changes
         var previousDevices = Set<UUID>()
+        var previousPositions: [UUID: DevicePositionCategory] = [:]
 
-        // Observe nearbyDevices changes to clean up selections when devices disappear
+        // Observe nearbyDevices changes to clean up selections and auto-boop on touch
         bluetoothManager.nearbyDevices
             .sink { [weak self] devices in
                 guard let self = self else { return }
@@ -84,13 +87,29 @@ class BoopManager: NSObject, ObservableObject {
                     }
                 }
 
+                // Auto-boop: detect devices that just entered ApproxTouching range
+                for (deviceID, position) in devices {
+                    if position == .ApproxTouching && previousPositions[deviceID] != .ApproxTouching {
+                        // Check cooldown to prevent rapid-fire boops
+                        if let lastBoop = self.lastBoopTime[deviceID],
+                           Date().timeIntervalSince(lastBoop) < self.boopCooldown {
+                            print("⏳ BoopManager: Skipping auto-boop for \(deviceID.uuidString.prefix(8)) - cooldown active")
+                            continue
+                        }
+                        print("🤝 BoopManager: Device \(deviceID.uuidString.prefix(8)) entered touching range - auto-selecting")
+                        self.selectDevice(deviceID)
+                    }
+                }
+
                 // Clean up selections for devices that are no longer nearby
                 self.mySelections = self.mySelections.intersection(deviceIDs)
                 self.theirSelections = self.theirSelections.intersection(deviceIDs)
                 self.displayNames = self.displayNames.filter { deviceIDs.contains($0.key) }
+                self.lastBoopTime = self.lastBoopTime.filter { deviceIDs.contains($0.key) }
 
                 print("📊 BoopManager: Current displayNames: \(self.displayNames.mapValues { $0 })")
 
+                previousPositions = devices
                 previousDevices = deviceIDs
             }
             .store(in: &cancellables)
@@ -139,6 +158,8 @@ class BoopManager: NSObject, ObservableObject {
             Task {
                 _ = await sendBluetoothMessage(deviceId: deviceID, messageType: .boop)
             }
+            // Record cooldown to prevent rapid-fire auto-boops
+            lastBoopTime[deviceID] = Date()
             // Clear selections after successful boop
             mySelections.remove(deviceID)
             theirSelections.remove(deviceID)
