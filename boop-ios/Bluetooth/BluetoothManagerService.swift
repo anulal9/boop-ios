@@ -19,6 +19,7 @@ protocol BluetoothServiceDelegate: AnyObject {
     func didReceiveConnectionAccept(from senderUUID: UUID)
     func didReceiveConnectionReject(from senderUUID: UUID)
     func didReceiveDisconnect(from senderUUID: UUID)
+    func didReceiveStoppedRanging(from senderUUID: UUID)
     func didExchangeUWBToken(for deviceID: UUID)
     func didReceiveUWBTokenUpdate(for deviceID: UUID, newToken: NIDiscoveryToken)
     func getUWBDiscoveryTokenForDevice(for deviceID: UUID) -> Data?
@@ -249,6 +250,9 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                     self.bleServiceDelegate?.didReceiveConnectionReject(from: message.senderUUID)
                 case .disconnect:
                     self.bleServiceDelegate?.didReceiveDisconnect(from: message.senderUUID)
+                case .stoppedRanging:
+                    print("🛑 BLE Service: Routing stoppedRanging message to delegate")
+                    self.bleServiceDelegate?.didReceiveStoppedRanging(from: message.senderUUID)
                 }
             }
             peripheralManager.respond(to: request, withResult: .success)
