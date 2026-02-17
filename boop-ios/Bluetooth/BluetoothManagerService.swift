@@ -34,7 +34,7 @@ protocol BoopDelegate: AnyObject {
 // MARK: - Service Protocol
 protocol BluetoothManagerService {
     func start() async
-    func stop() async
+    func stop(from peripherals: [CBPeripheral]) async
     func connect(to peripheral: CBPeripheral)
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async
     func disconnect(from peripheral: CBPeripheral) async
@@ -87,10 +87,13 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         maybeStart()
     }
 
-    func stop() async {
-        peripheralManager.stopAdvertising()
+    func stop(from peripherals: [CBPeripheral]) async {
+        hasStarted = false // prevents discovery from occuring while stopping is in progress
         centralManager.stopScan()
-        hasStarted = false
+        for peripheral in peripherals {
+            await disconnect(from: peripheral)
+        }
+        peripheralManager.stopAdvertising()
         centralReceivedPeerToken.removeAll()
         centralReceivedAck.removeAll()
         print("🛑 Stopped advertising and scanning")
@@ -101,12 +104,14 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
     }
 
     func connect(to peripheral: CBPeripheral) {
+        guard self.hasStarted else { return }
         peripheral.delegate = self
         centralManager.connect(peripheral, options: nil)
         print("🔗 Connecting to \(peripheral.identifier)")
     }
 
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async {
+        guard self.hasStarted else { return }
         guard let service = peripheral.services?.first(where: { $0.uuid == boopServiceUUID }),
               let characteristic = service.characteristics?.first(where: { $0.uuid == messageCharacteristicUUID }) else {
             print("⚠️ Service or characteristic not found")
@@ -200,6 +205,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                         didDiscover peripheral: CBPeripheral,
                         advertisementData: [String : Any],
                         rssi RSSI: NSNumber) {
+        guard self.hasStarted else { return }
         let deviceID = peripheral.identifier
         
         Task { @MainActor in
@@ -289,6 +295,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
 
     func peripheralManager(_ peripheral: CBPeripheralManager,
                           didReceiveWrite requests: [CBATTRequest]) {
+        guard self.hasStarted else { return }
         for request in requests {
             let incommingRequestCharacteristic = request.characteristic.uuid
             switch incommingRequestCharacteristic {
@@ -305,6 +312,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
 
     func peripheralManager(_ peripheral: CBPeripheralManager,
                           didReceiveRead request: CBATTRequest) {
+        guard self.hasStarted else { return }
         if request.characteristic.uuid == uwbTokenCharacteristicUUID {
             // Track this central so we can match writes later
             let central = request.central
@@ -326,6 +334,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
 
     func centralManager(_ central: CBCentralManager,
                        didConnect peripheral: CBPeripheral) {
+        guard self.hasStarted else { return }
         print("✅ BLE Service: Connected to \(peripheral.identifier.uuidString.prefix(8))")
         peripheral.discoverServices([boopServiceUUID])
         print("🔍 BLE Service: Discovering services for \(peripheral.identifier.uuidString.prefix(8))")
@@ -338,6 +347,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
     func centralManager(_ central: CBCentralManager,
                        didDisconnectPeripheral peripheral: CBPeripheral,
                        error: Error?) {
+        guard self.hasStarted else { return }
         if let error = error {
             print("❌ BLE Service: Disconnected from \(peripheral.identifier.uuidString.prefix(8)) with error: \(error.localizedDescription)")
         } else {
@@ -351,6 +361,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
     func centralManager(_ central: CBCentralManager,
                        didFailToConnect peripheral: CBPeripheral,
                        error: Error?) {
+        guard self.hasStarted else { return }
         print("⚠️ BLE Service: Failed to connect to \(peripheral.identifier.uuidString.prefix(8)): \(error?.localizedDescription ?? "Unknown error")")
     }
 }
@@ -360,6 +371,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
     
     func peripheral(_ peripheral: CBPeripheral,
                    didDiscoverServices error: Error?) {
+        guard self.hasStarted else { return }
         if let error = error {
             print("⚠️ BLE Service: Error discovering services for \(peripheral.identifier.uuidString.prefix(8)): \(error.localizedDescription)")
             return
@@ -380,6 +392,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                    didDiscoverCharacteristicsFor service: CBService,
                    error: Error?) {
+        guard self.hasStarted else { return }
         if let error = error {
             print("⚠️ BLE Service: Error discovering characteristics for \(peripheral.identifier.uuidString.prefix(8)): \(error.localizedDescription)")
             return
@@ -421,6 +434,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
+        guard self.hasStarted else { return }
         Task { @MainActor in
             bleServiceDelegate?.didInvalidateService(peripheral.identifier, peripheral: peripheral)
         }
@@ -429,6 +443,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                    didWriteValueFor characteristic: CBCharacteristic,
                    error: Error?) {
+        guard self.hasStarted else { return }
         if let error = error {
             print("⚠️ BLE Service: Error writing value to \(peripheral.identifier.uuidString.prefix(8)): \(error.localizedDescription)")
         } else {
@@ -445,6 +460,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral,
                    didUpdateValueFor characteristic: CBCharacteristic,
                    error: Error?) {
+        guard self.hasStarted else { return }
         if let error = error {
             let name: String
             switch characteristic.uuid {

@@ -40,7 +40,7 @@ enum DevicePositionCategory: UInt8 {
 @MainActor
 class UWBManager: NSObject, UWBManaging {
     
-    var discoveryTokens: NIDiscoveryToken?
+    var myDiscoveryToken: NIDiscoveryToken?
     
     
     @Published var nearbyDevices: [UUID: DevicePositionCategory] = [:]
@@ -264,6 +264,7 @@ extension UWBManager: NISessionDelegate {
 
                 self.nearbyObjects.removeValue(forKey: deviceID)
                 self.nearbyDevices.removeValue(forKey: deviceID)
+                session.invalidate()
                 print("📍 UWB: Lost connection to \(deviceID.uuidString.prefix(8)), reason: \(reason.rawValue)")
             }
             printDiagnostics()
