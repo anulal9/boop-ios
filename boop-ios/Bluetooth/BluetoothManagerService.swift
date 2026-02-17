@@ -36,7 +36,7 @@ protocol BoopDelegate: AnyObject {
 protocol BluetoothManagerService {
     func start() async
     func stop(from peripherals: [CBPeripheral]) async
-    func connect(to peripheral: CBPeripheral)
+    func connect(to peripheral: CBPeripheral) -> Bool
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async
     func disconnect(from peripheral: CBPeripheral) async
 }
@@ -104,11 +104,13 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         self.boopDelegate = boopDelegate
     }
 
-    func connect(to peripheral: CBPeripheral) {
-        guard self.hasStarted else { return }
+    @discardableResult
+    func connect(to peripheral: CBPeripheral) -> Bool {
+        guard self.hasStarted else { return false }
         peripheral.delegate = self
         centralManager.connect(peripheral, options: nil)
         print("🔗 Connecting to \(peripheral.identifier)")
+        return true
     }
 
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async {
