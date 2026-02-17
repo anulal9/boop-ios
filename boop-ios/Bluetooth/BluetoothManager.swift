@@ -73,12 +73,12 @@ class BluetoothManager: NSObject, ObservableObject {
                 await service.sendMessage(stoppedMessage, to: peripheral)
             }
             await service.stop(from: Array(connectedPeripherals.values))
+            uwbManager.stopRangingForAllDevices()
+            connectedPeripherals.removeAll()
+            discoveredDevices.removeAll()
+            connectionRequests.removeAll()
+            connectionResponses.removeAll()
         }
-        uwbManager.stopRangingForAllDevices()
-        connectedPeripherals.removeAll()
-        discoveredDevices.removeAll()
-        connectionRequests.removeAll()
-        connectionResponses.removeAll()
     }
 
     func getNearbyDevices() -> [UUID: DevicePositionCategory] {
@@ -219,11 +219,11 @@ extension BluetoothManager: BluetoothServiceDelegate {
         self.disconnect(from: senderUUID)
     }
 
-    func didReceiveStoppedRanging(from senderUUID: UUID) {
-        print("🛑 BT Manager: didReceiveStoppedRanging(\(senderUUID.uuidString.prefix(8)))")
-        discoveredDevices.removeValue(forKey: senderUUID)
-        connectedPeripherals.removeValue(forKey: senderUUID)
-        uwbManager.stopRanging(to: senderUUID)
+    func didReceiveStoppedRanging(peripheralUUID: UUID) {
+        print("🛑 BT Manager: didReceiveStoppedRanging(peripheral: \(peripheralUUID.uuidString.prefix(8)))")
+        discoveredDevices.removeValue(forKey: peripheralUUID)
+        connectedPeripherals.removeValue(forKey: peripheralUUID)
+        uwbManager.stopRanging(to: peripheralUUID)
     }
 
     func didExchangeUWBToken(for deviceID: UUID) {
