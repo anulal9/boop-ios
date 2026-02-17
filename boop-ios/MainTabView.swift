@@ -13,6 +13,11 @@ struct MainTabView: View {
                 }
                 .tag(0)
 
+            BoopRangingView()
+                .tabItem {
+                    Label("Boop", systemImage: "hand.tap.fill")
+                }
+
             ContactsView()
                 .tabItem {
                     Label("Contacts", systemImage: "person.2")

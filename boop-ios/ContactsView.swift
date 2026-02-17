@@ -51,6 +51,7 @@ struct ContactsView: View {
             .sheet(isPresented: $showBoopRanging) {
                 BoopRangingView(isPresented: $showBoopRanging)
             }
+
         }
     }
 

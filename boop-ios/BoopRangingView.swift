@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct BoopRangingView: View {
-    @Binding var isPresented: Bool
+    var isPresented: Binding<Bool>?
     @EnvironmentObject var boopManager: BoopManager
     @Environment(\.modelContext) private var modelContext
     @Query private var contacts: [Contact]
@@ -40,7 +40,7 @@ struct BoopRangingView: View {
                 id: id,
                 displayName: displayName,
                 distance: distance,
-                isSelected: boopManager.mySelections.contains(id)
+                isSelected: false
             )
         }
         .sorted { $0.distance.rawValue < $1.distance.rawValue }
@@ -59,7 +59,7 @@ struct BoopRangingView: View {
                             .scaleEffect(1.5)
                             .tint(.accentPrimary)
 
-                        Text("Looking for nearby devices...")
+                        Text("Looking for friends nearby...")
                             .subtitleStyle()
                         Spacer()
                     }
@@ -67,13 +67,7 @@ struct BoopRangingView: View {
                     ScrollView {
                         LazyVStack(spacing: Spacing.md) {
                             ForEach(nearbyDevices) { device in
-                                DeviceRow(
-                                    device: device,
-                                    isSelected: boopManager.mySelections.contains(device.id),
-                                    otherSelected: boopManager.theirSelections.contains(device.id)
-                                ) {
-                                    boopManager.selectDevice(device.id)
-                                }
+                                DeviceRow(device: device)
                             }
                         }
                         .padding(.horizontal, Spacing.md)
@@ -85,16 +79,18 @@ struct BoopRangingView: View {
             .ignoresSafeArea(edges: .horizontal)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Select a User")
+                    Text("Boop")
                         .heading1Style()
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        isPresented = false
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: IconSize.standard, weight: .semibold))
-                            .foregroundColor(.accentPrimary)
+                if isPresented != nil {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            isPresented?.wrappedValue = false
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: IconSize.standard, weight: .semibold))
+                                .foregroundColor(.accentPrimary)
+                        }
                     }
                 }
             }
@@ -114,8 +110,8 @@ struct BoopRangingView: View {
                 }
             }
             .animation(.easeInOut(duration: animationDuration), value: showBoop)
-            .onChange(of: boopManager.latestBoopEvent) { oldValue, newValue in
-                // Only handle if this view is presented and event is new
+            .onChange(of: boopManager.latestBoopEvent) { _, newValue in
+                // Only handle if event is new
                 guard let event = newValue, !showBoop else { return }
                 handleNewBoop(event: event)
             }
@@ -123,7 +119,6 @@ struct BoopRangingView: View {
         .onAppear { boopManager.start() }
         .onDisappear { boopManager.stop() }
     }
-        
 
     private func handleNewBoop(event: BoopEvent) {
         let boop = event.boop
@@ -169,10 +164,10 @@ struct BoopRangingView: View {
         // Show modal
         showBoop = true
 
-        // Hide modal and dismiss view after animation duration
+        // Hide modal after animation duration (dismiss sheet if presented as one)
         DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
             showBoop = false
-            isPresented = false
+            isPresented?.wrappedValue = false
         }
     }
 }
@@ -180,49 +175,24 @@ struct BoopRangingView: View {
 // MARK: - Device Row Component
 struct DeviceRow: View {
     let device: NearbyDevice
-    let isSelected: Bool
-    let otherSelected: Bool
-    let onTap: () -> Void
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: Spacing.md) {
-                // Distance indicator
-                Text(device.distanceEmoji)
-                    .font(.system(size: 30))
+        HStack(spacing: Spacing.md) {
+            // Distance indicator
+            Text(device.distanceEmoji)
+                .font(.system(size: 30))
 
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text(device.displayName)
-                        .heading2Style()
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(device.displayName)
+                    .heading2Style()
 
-                    HStack(spacing: Spacing.xs) {
-                        Text(device.distanceText)
-                            .subtitleStyle()
-
-                        if otherSelected {
-                            Text("• Wants to boop you!")
-                                .subtitleStyle()
-                                .foregroundColor(.accentPrimary)
-                        }
-                    }
-                }
-
-                Spacer()
-
-                // Selection indicator
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.accentPrimary)
-                        .font(.system(size: 24))
-                } else {
-                    Image(systemName: "circle")
-                        .foregroundColor(.textMuted)
-                        .font(.system(size: 24))
-                }
+                Text(device.distanceText)
+                    .subtitleStyle()
             }
-            .padding(Spacing.md)
-            .cardStyle()
+
+            Spacer()
         }
-        .buttonStyle(PlainButtonStyle())
+        .padding(Spacing.md)
+        .cardStyle()
     }
 }
