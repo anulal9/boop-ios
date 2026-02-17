@@ -63,10 +63,7 @@ class BluetoothManager: NSObject, ObservableObject {
 
     func stop() {
         Task {
-            for (_, peripheral) in connectedPeripherals {
-                await service.disconnect(from: peripheral)
-            }
-            await service.stop()
+            await service.stop(from: Array(connectedPeripherals.values))
         }
         uwbManager.stopRangingForAllDevices()
         connectedPeripherals.removeAll()
