@@ -12,7 +12,6 @@ import NearbyInteraction
 protocol BluetoothServiceDelegate: AnyObject {
     func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral)
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber)
-    func didRemoveDevice(_ deviceID: UUID)
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral)
     func didDisconnect(from deviceID: UUID)
     func didReceiveConnectionRequest(from senderUUID: UUID)

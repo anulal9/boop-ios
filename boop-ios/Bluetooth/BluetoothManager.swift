@@ -168,15 +168,6 @@ extension BluetoothManager: BluetoothServiceDelegate {
         }
     }
 
-    func didRemoveDevice(_ deviceID: UUID) {
-        print("🗑️ BT Manager: didRemoveDevice(\(deviceID.uuidString.prefix(8)))")
-        // Remove from nearby devices
-        discoveredDevices.removeValue(forKey: deviceID)
-        connectedPeripherals.removeValue(forKey: deviceID)
-        uwbManager.stopRanging(to: deviceID)
-        
-        print("📊 BT Manager: State after removal - discoveredDevices: \(discoveredDevices.count), connectedPeripherals: \(connectedPeripherals.count)")
-    }
 
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral) {
         print("🔗 BT Manager: didConnect(\(deviceID.uuidString.prefix(8)))")
