@@ -62,18 +62,16 @@ class BluetoothManager: NSObject, ObservableObject {
     }
 
     func stop() {
-        // Notify all connected peers that we've stopped ranging
-        let stoppedMessage = BluetoothMessage(
-            senderUUID: localDeviceUUID,
-            messageType: .stoppedRanging
-        )
-        for (_, peripheral) in connectedPeripherals {
-            Task {
+        
+        Task {
+            // Notify all connected peers that we've stopped ranging
+            let stoppedMessage = BluetoothMessage(
+                senderUUID: localDeviceUUID,
+                messageType: .stoppedRanging
+            )
+            for (_, peripheral) in connectedPeripherals {
                 await service.sendMessage(stoppedMessage, to: peripheral)
             }
-        }
-
-        Task {
             await service.stop(from: Array(connectedPeripherals.values))
         }
         uwbManager.stopRangingForAllDevices()
@@ -162,10 +160,11 @@ extension BluetoothManager: BluetoothServiceDelegate {
     
 
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
-            if discoveredDevices[deviceID] == nil {
+        if discoveredDevices[deviceID] == nil {
+            if service.connect(to: peripheral) {
                 discoveredDevices[deviceID] = peripheral
                 print("✅ BT Manager: Added device to discoveredDevices - total: \(discoveredDevices.count)")
-            service.connect(to: peripheral)
+            }
         }
     }
 
