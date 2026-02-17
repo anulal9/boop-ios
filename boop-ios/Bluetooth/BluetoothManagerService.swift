@@ -12,13 +12,13 @@ import NearbyInteraction
 protocol BluetoothServiceDelegate: AnyObject {
     func didInvalidateService(_ deviceID: UUID, peripheral: CBPeripheral)
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber)
-    func didRemoveDevice(_ deviceID: UUID)
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral)
     func didDisconnect(from deviceID: UUID)
     func didReceiveConnectionRequest(from senderUUID: UUID)
     func didReceiveConnectionAccept(from senderUUID: UUID)
     func didReceiveConnectionReject(from senderUUID: UUID)
     func didReceiveDisconnect(from senderUUID: UUID)
+    func didReceiveStoppedRanging(peripheralUUID: UUID)
     func didExchangeUWBToken(for deviceID: UUID)
     func didReceiveUWBTokenUpdate(for deviceID: UUID, newToken: NIDiscoveryToken)
     func getUWBDiscoveryTokenForDevice(for deviceID: UUID) -> Data?
@@ -35,7 +35,7 @@ protocol BoopDelegate: AnyObject {
 protocol BluetoothManagerService {
     func start() async
     func stop(from peripherals: [CBPeripheral]) async
-    func connect(to peripheral: CBPeripheral)
+    func connect(to peripheral: CBPeripheral) -> Bool
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async
     func disconnect(from peripheral: CBPeripheral) async
 }
@@ -103,11 +103,13 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
         self.boopDelegate = boopDelegate
     }
 
-    func connect(to peripheral: CBPeripheral) {
-        guard self.hasStarted else { return }
+    @discardableResult
+    func connect(to peripheral: CBPeripheral) -> Bool {
+        guard self.hasStarted else { return false }
         peripheral.delegate = self
         centralManager.connect(peripheral, options: nil)
         print("🔗 Connecting to \(peripheral.identifier)")
+        return true
     }
 
     func sendMessage(_ message: BluetoothMessage, to peripheral: CBPeripheral) async {
@@ -249,6 +251,9 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                     self.bleServiceDelegate?.didReceiveConnectionReject(from: message.senderUUID)
                 case .disconnect:
                     self.bleServiceDelegate?.didReceiveDisconnect(from: message.senderUUID)
+                case .stoppedRanging:
+                    print("🛑 BLE Service: Routing stoppedRanging message to delegate")
+                    self.bleServiceDelegate?.didReceiveStoppedRanging(peripheralUUID: peripheralUUID)
                 }
             }
             peripheralManager.respond(to: request, withResult: .success)

@@ -62,15 +62,23 @@ class BluetoothManager: NSObject, ObservableObject {
     }
 
     func stop() {
-        Task {
-            await service.stop(from: Array(connectedPeripherals.values))
-        }
-        uwbManager.stopRangingForAllDevices()
-        connectedPeripherals.removeAll()
-        discoveredDevices.removeAll()
-        connectionRequests.removeAll()
-        connectionResponses.removeAll()
         
+        Task {
+            // Notify all connected peers that we've stopped ranging
+            let stoppedMessage = BluetoothMessage(
+                senderUUID: localDeviceUUID,
+                messageType: .stoppedRanging
+            )
+            for (_, peripheral) in connectedPeripherals {
+                await service.sendMessage(stoppedMessage, to: peripheral)
+            }
+            await service.stop(from: Array(connectedPeripherals.values))
+            uwbManager.stopRangingForAllDevices()
+            connectedPeripherals.removeAll()
+            discoveredDevices.removeAll()
+            connectionRequests.removeAll()
+            connectionResponses.removeAll()
+        }
     }
 
     func getNearbyDevices() -> [UUID: DevicePositionCategory] {
@@ -152,22 +160,14 @@ extension BluetoothManager: BluetoothServiceDelegate {
     
 
     func didDiscover(_ deviceID: UUID, peripheral: CBPeripheral, rssi: NSNumber) {
-            if discoveredDevices[deviceID] == nil {
+        if discoveredDevices[deviceID] == nil {
+            if service.connect(to: peripheral) {
                 discoveredDevices[deviceID] = peripheral
                 print("✅ BT Manager: Added device to discoveredDevices - total: \(discoveredDevices.count)")
-            service.connect(to: peripheral)
+            }
         }
     }
 
-    func didRemoveDevice(_ deviceID: UUID) {
-        print("🗑️ BT Manager: didRemoveDevice(\(deviceID.uuidString.prefix(8)))")
-        // Remove from nearby devices
-        discoveredDevices.removeValue(forKey: deviceID)
-        connectedPeripherals.removeValue(forKey: deviceID)
-        uwbManager.stopRanging(to: deviceID)
-        
-        print("📊 BT Manager: State after removal - discoveredDevices: \(discoveredDevices.count), connectedPeripherals: \(connectedPeripherals.count)")
-    }
 
     func didConnect(to deviceID: UUID, peripheral: CBPeripheral) {
         print("🔗 BT Manager: didConnect(\(deviceID.uuidString.prefix(8)))")
@@ -208,6 +208,13 @@ extension BluetoothManager: BluetoothServiceDelegate {
     func didReceiveDisconnect(from senderUUID: UUID) {
         print("🔌 BT Manager: didReceiveDisconnect(\(senderUUID.uuidString.prefix(8)))")
         self.disconnect(from: senderUUID)
+    }
+
+    func didReceiveStoppedRanging(peripheralUUID: UUID) {
+        print("🛑 BT Manager: didReceiveStoppedRanging(peripheral: \(peripheralUUID.uuidString.prefix(8)))")
+        discoveredDevices.removeValue(forKey: peripheralUUID)
+        connectedPeripherals.removeValue(forKey: peripheralUUID)
+        uwbManager.stopRanging(to: peripheralUUID)
     }
 
     func didExchangeUWBToken(for deviceID: UUID) {
