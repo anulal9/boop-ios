@@ -240,7 +240,9 @@ extension UWBManager: NISessionDelegate {
                         nearbyDevices[deviceID] = DevicePositionCategory.InRange
                         break
                     default:
-                        self.stopRanging(to: deviceID)
+                        nearbyDevices[deviceID] = DevicePositionCategory.OutOfRange
+                        break
+                    
                 }
 
                 if let distance = object.distance {
