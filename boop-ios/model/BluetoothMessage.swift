@@ -24,6 +24,7 @@ struct BluetoothMessage {
         case boop = 0x06
         case boopRequest = 0x07  // User selected this device for booping
         case presence = 0x08     // Announce display name when connecting
+        case stoppedRanging = 0x09  // Notify peer that ranging has stopped
     }
 
     // MARK: - Encoding
