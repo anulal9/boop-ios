@@ -3,6 +3,8 @@ import SwiftUI
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var isProfileLoaded: Bool? = nil
+    @Binding var selectedTab: Int
+    @Binding var selectedInteractionID: UUID?
 
     private func checkProfileExists() {
         Task {
@@ -15,7 +17,7 @@ struct RootView: View {
         Group {
             if let isProfileLoaded = isProfileLoaded {
                 if isProfileLoaded {
-                    MainTabView()
+                    MainTabView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID)
                 } else {
                     ProfileSetupView(onSave: { profile, _ in
                         Task {
@@ -38,5 +40,5 @@ struct RootView: View {
 }
 
 #Preview {
-    RootView()
+    RootView(selectedTab: .constant(0), selectedInteractionID: .constant(nil))
 }

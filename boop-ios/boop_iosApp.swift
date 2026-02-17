@@ -14,6 +14,8 @@ struct boop_iosApp: App {
     private var modelConfiguration: ModelConfiguration
     @State var sharedModelContainer: ModelContainer?
     @StateObject private var boopManager = BoopManager()
+    @State private var selectedTab: Int = 0
+    @State private var selectedInteractionID: UUID?
 
     init() {
         self.schema = Schema([
@@ -38,14 +40,35 @@ struct boop_iosApp: App {
             fatalError("Unable to create model container \(error)")
         }
     }
+    
+    private func handleURL(_ url: URL) {
+        print("📱 Deep link received: \(url)")
+        
+        // Handle boop://timeline or boop://timeline/{interactionID}
+        if url.scheme == "boop", url.host == "timeline" {
+            selectedTab = 0 // Switch to timeline tab
+            
+            let pathComponents = url.pathComponents.filter { $0 != "/" }
+            if let idString = pathComponents.first, let interactionID = UUID(uuidString: idString) {
+                selectedInteractionID = interactionID
+                print("📱 Navigating to interaction: \(interactionID)")
+            } else {
+                selectedInteractionID = nil
+                print("📱 Navigating to timeline")
+            }
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
             Group {
                 if let container = sharedModelContainer {
-                    RootView()
+                    RootView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID)
                         .modelContainer(container)
                         .environmentObject(boopManager)
+                        .onOpenURL { url in
+                            handleURL(url)
+                        }
                 } else {
                     VStack
                     {

@@ -240,12 +240,8 @@ extension BoopManager: BoopDelegate {
         // Create boop object with profile data
         let boop = Boop(senderUUID: senderUUID, displayName: displayName, birthday: birthday, bio: bio, gradientColors: colors)
 
-        // Start live activity on main thread
-        Task { @MainActor in
-            LiveActivityManager.shared.startBoopLiveActivity(contactName: displayName)
-        }
-
         // Broadcast event (don't store in queue)
+        // Note: Live activity is started in BoopTimelineView.handleNewBoop() where the interaction is created
         latestBoopEvent = BoopEvent(boop: boop)
     }
 

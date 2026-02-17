@@ -14,7 +14,12 @@ class LiveActivityManager {
     static let shared = LiveActivityManager()
     private var currentActivity: Activity<BoopLiveActivityAttributes>?
 
-    func startBoopLiveActivity(contactName: String) {
+    func startBoopLiveActivity(
+        contactName: String,
+        contactID: UUID,
+        interactionID: UUID? = nil,
+        gradientColors: [String] = ["#ff7aa2", "#3a1e3f"]
+    ) {
         if #available(iOS 16.1, *) {
             let authInfo = ActivityAuthorizationInfo()
             print("📊 Activity Authorization - Enabled: \(authInfo.areActivitiesEnabled)")
@@ -26,20 +31,25 @@ class LiveActivityManager {
                 return
             }
 
-            let existingCount = Activity<BoopLiveActivityAttributes>.activities.count
-            print("📊 Existing boop activities: \(existingCount)")
-
-            if let existing = Activity<BoopLiveActivityAttributes>.activities.first {
-                print("✅ Reusing existing activity: \(existing.id)")
-                currentActivity = existing
-                return
+            // End existing activity if any before starting new one
+            if let existing = currentActivity {
+                Task {
+                    await existing.end(nil, dismissalPolicy: .immediate)
+                }
+                currentActivity = nil
             }
 
             let attributes = BoopLiveActivityAttributes()
-            let contentState = BoopLiveActivityAttributes.ContentState(boopTime: Date())
+            let contentState = BoopLiveActivityAttributes.ContentState(
+                contactName: contactName,
+                contactID: contactID,
+                interactionID: interactionID,
+                boopTime: Date(),
+                gradientColors: gradientColors
+            )
 
             do {
-                let staleDate = Date().addingTimeInterval(300)
+                let staleDate = Date().addingTimeInterval(300) // 5 minutes
                 let content = ActivityContent(state: contentState, staleDate: staleDate)
                 let activity = try Activity.request(
                     attributes: attributes,
@@ -47,7 +57,7 @@ class LiveActivityManager {
                     pushType: nil
                 )
                 currentActivity = activity
-                print("✅ Live Activity started! id=\(activity.id) state=\(activity.activityState)")
+                print("✅ Live Activity started! id=\(activity.id) contact=\(contactName)")
             } catch {
                 print("❌ Failed to start Live Activity: \(error.localizedDescription)")
                 if let error = error as NSError? {
@@ -55,6 +65,45 @@ class LiveActivityManager {
                     print("Error userInfo: \(error.userInfo)")
                 }
             }
+        }
+    }
+    
+    func updateBoopLiveActivity(
+        contactName: String,
+        contactID: UUID,
+        interactionID: UUID?,
+        gradientColors: [String] = ["#ff7aa2", "#3a1e3f"]
+    ) async {
+        if #available(iOS 16.1, *) {
+            guard let activity = currentActivity else {
+                print("⚠️ No active Live Activity to update")
+                return
+            }
+            
+            let updatedState = BoopLiveActivityAttributes.ContentState(
+                contactName: contactName,
+                contactID: contactID,
+                interactionID: interactionID,
+                boopTime: Date(),
+                gradientColors: gradientColors
+            )
+            
+            let content = ActivityContent(state: updatedState, staleDate: Date().addingTimeInterval(300))
+            await activity.update(content)
+            print("✅ Live Activity updated! contact=\(contactName)")
+        }
+    }
+    
+    func endBoopLiveActivity() async {
+        if #available(iOS 16.1, *) {
+            guard let activity = currentActivity else {
+                print("⚠️ No active Live Activity to end")
+                return
+            }
+            
+            await activity.end(nil, dismissalPolicy: .default)
+            currentActivity = nil
+            print("✅ Live Activity ended")
         }
     }
 

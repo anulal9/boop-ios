@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B945BB452F43FEB300FFD049 /* BoopLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B945BB412F43FEB300FFD049 /* BoopLiveActivityAttributes.swift */; };
+		B945BB462F43FEB300FFD049 /* xcschememanagement.plist in Resources */ = {isa = PBXBuildFile; fileRef = B945BB3A2F43FEB300FFD049 /* xcschememanagement.plist */; };
+		B945BB482F43FEB300FFD049 /* BoopLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B945BB412F43FEB300FFD049 /* BoopLiveActivityAttributes.swift */; };
+		B945BB492F43FEB300FFD049 /* xcschememanagement.plist in Resources */ = {isa = PBXBuildFile; fileRef = B945BB3A2F43FEB300FFD049 /* xcschememanagement.plist */; };
 		B9ADE1072F3AC2190026F623 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9ADE1062F3AC2190026F623 /* WidgetKit.framework */; };
 		B9ADE1092F3AC2190026F623 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9ADE1082F3AC2190026F623 /* SwiftUI.framework */; };
 		B9ADE11A2F3AC21A0026F623 /* BoopLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = B9ADE1052F3AC2190026F623 /* BoopLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -37,6 +41,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B945BB3A2F43FEB300FFD049 /* xcschememanagement.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = xcschememanagement.plist; sourceTree = "<group>"; };
+		B945BB412F43FEB300FFD049 /* BoopLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoopLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		B95BB9332EB42535000BE885 /* boop-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "boop-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9ADE1052F3AC2190026F623 /* BoopLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BoopLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		B9ADE1062F3AC2190026F623 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -97,9 +103,67 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B945BB3B2F43FEB300FFD049 /* xcschemes */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3A2F43FEB300FFD049 /* xcschememanagement.plist */,
+			);
+			path = xcschemes;
+			sourceTree = "<group>";
+		};
+		B945BB3C2F43FEB300FFD049 /* aparna.xcuserdatad */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3B2F43FEB300FFD049 /* xcschemes */,
+			);
+			path = aparna.xcuserdatad;
+			sourceTree = "<group>";
+		};
+		B945BB3D2F43FEB300FFD049 /* xcuserdata */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3C2F43FEB300FFD049 /* aparna.xcuserdatad */,
+			);
+			path = xcuserdata;
+			sourceTree = "<group>";
+		};
+		B945BB3E2F43FEB300FFD049 /* xcode */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3D2F43FEB300FFD049 /* xcuserdata */,
+			);
+			path = xcode;
+			sourceTree = "<group>";
+		};
+		B945BB3F2F43FEB300FFD049 /* .swiftpm */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3E2F43FEB300FFD049 /* xcode */,
+			);
+			path = .swiftpm;
+			sourceTree = "<group>";
+		};
+		B945BB402F43FEB300FFD049 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		B945BB432F43FEB300FFD049 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B945BB3F2F43FEB300FFD049 /* .swiftpm */,
+				B945BB402F43FEB300FFD049 /* Sources */,
+				B945BB412F43FEB300FFD049 /* BoopLiveActivityAttributes.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
 		B95BB92A2EB42535000BE885 = {
 			isa = PBXGroup;
 			children = (
+				B945BB432F43FEB300FFD049 /* Shared */,
 				B95BB9352EB42535000BE885 /* boop-ios */,
 				B9ADE10A2F3AC2190026F623 /* BoopLiveActivity */,
 				B9EDEE672EFC8CD8008C7D4D /* Frameworks */,
@@ -243,6 +307,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B945BB462F43FEB300FFD049 /* xcschememanagement.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -250,6 +315,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B945BB492F43FEB300FFD049 /* xcschememanagement.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -260,6 +326,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B945BB452F43FEB300FFD049 /* BoopLiveActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,6 +334,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B945BB482F43FEB300FFD049 /* BoopLiveActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -417,7 +485,7 @@
 				DEVELOPMENT_TEAM = Z9WN384MPT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses Bluetooth to find and connect with nearby devices.";
+				INFOPLIST_KEY_CFBundleURLTypes = "<array><dict><key>CFBundleTypeRole</key><string>Editor</string><key>CFBundleURLName</key><string>com.boop.boop-ios</string><key>CFBundleURLSchemes</key><array><string>boop</string></array></dict></array>";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "This app needs Bluetooth access to advertise its presence to nearby devices.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app uses location to add location tags to interactions with the user and their friends on the app";
 				INFOPLIST_KEY_NSNearbyInteractionUsageDescription = "This app uses Ultra Wideband to accurately detect when devices are close together for the boop feature.";
@@ -451,7 +519,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"boop-ios/Preview Content\"";
-				DEVELOPMENT_TEAM = P3PR8G7GB9;
+				DEVELOPMENT_TEAM = Z9WN384MPT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses Bluetooth to find and connect with nearby devices.";
@@ -469,7 +537,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.boop.boop-ios";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.boop.boop-ios.aparna";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
