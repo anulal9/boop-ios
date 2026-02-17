@@ -27,7 +27,7 @@ class UWBService: IUWBService {
     
     // MARK: - Configuration
     private struct DistanceThresholds {
-        static let touchingDistance: Float = 0.05     // meters (5cm) - touching range
+        static let touchingDistance: Float = 0.07     // meters (7cm) - touching range
         static let maxDistance: Float = 1          // meters (100cm) - maximum proximity range
     }
     
