@@ -137,9 +137,9 @@ else if request.characteristic.uuid == uwbTokenCharacteristicUUID {
 ┌─────────────────────────────────────────────────────────┐
 │                     BoopManager                         │
 │  (@MainActor, ObservableObject)                         │
-│  - Maintains boopQueue of touching devices (≤10cm)      │
-│  - Timer-based periodic updates (every 2s)              │
-│  - Processes queue to send friend requests              │
+│  - Subscribes to bluetoothManager.nearbyDevices (Combine)│
+│  - compareNearbyDevicesUpdate() auto-boops at ≤7cm      │
+│  - @Published latestBoopEvent drives UI and persistence  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -147,48 +147,11 @@ else if request.characteristic.uuid == uwbTokenCharacteristicUUID {
 
 - **`boop-ios/Bluetooth/BluetoothManagerService.swift`**: BLE backend handling advertising, scanning, and token exchange
 - **`boop-ios/Bluetooth/BluetoothManager.swift`**: MainActor wrapper with @Published state and UWB integration
-- **`boop-ios/UWBManager.swift`**: UWB ranging session management and proximity detection
-- **`boop-ios/BoopManager.swift`**: Queue management for devices in "touching" range
+- **`boop-ios/Bluetooth/UWBManager.swift`**: UWB ranging session management and proximity detection
+- **`boop-ios/Bluetooth/UWBService.swift`**: Distance threshold evaluation (7cm touching, 100cm max)
+- **`boop-ios/BoopManager.swift`**: Combine-based orchestrator; triggers automatic boop at touching range
 
 ## Additional Features Implemented
-
-### Periodic Queue Updates in BoopManager
-
-**Purpose**: UWB distance/direction data changes continuously even when the nearbyDevices list doesn't change.
-
-**Implementation** (`BoopManager.swift:44-96`):
-```swift
-private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
-private var updateTimer: Timer?
-
-private func startPeriodicUpdates() {
-    updateTimer = Timer.scheduledTimer(withTimeInterval: updateInterval, repeats: true) { [weak self] _ in
-        guard let self = self else { return }
-        Task { @MainActor in
-            await self.updateBoopQueueAsync()
-        }
-    }
-}
-
-private func updateBoopQueueAsync() async {
-    var touchingDevices: [UUID] = []
-    for deviceID in bluetoothManager.nearbyDevices {
-        if await bluetoothManager.isApproximatelyTouchingAsync(deviceID: deviceID) {
-            touchingDevices.append(deviceID)
-        }
-    }
-    boopQueue = touchingDevices
-}
-```
-
-### Async UWB Methods in BluetoothManager
-
-Added async wrapper methods for UWB queries (`BluetoothManager.swift:139-154`):
-- `isPointingAtAsync(deviceID:)`
-- `isNearbyAsync(deviceID:)`
-- `isApproximatelyTouchingAsync(deviceID:)`
-
-These allow calling from async contexts (like Timer callbacks) without blocking the main thread.
 
 ### Diagnostics Logging
 
@@ -237,27 +200,18 @@ Run on two physical devices and check logs for:
 1. **Discovery**: Devices should appear in nearbyDevices within ~2 seconds
 2. **Distance**: Move devices closer/farther, check distance updates
 3. **Direction**: Point devices at each other, verify direction vector changes
-4. **Touching**: Bring devices within 10cm, verify boopQueue updates every ~2 seconds
-5. **Removal**: Move devices far apart, verify removal from nearbyDevices and boopQueue
+4. **Touching**: Bring devices within 7cm, verify `ApproxTouching` category is set in `nearbyDevices`
+5. **Removal**: Move devices far apart, verify removal from nearbyDevices
 
 ### Test Boop Flow
 
-1. Bring two devices within 10cm (approximately touching)
-2. Check boopQueue on both devices (should contain peer UUID)
-3. Call `processQueue()` on one device
-4. Verify connection request received on other device
-5. Test accept/reject flow
+1. Bring two devices within 7cm (approximately touching)
+2. Verify `BoopManager` detects `.ApproxTouching` state via `compareNearbyDevicesUpdate`
+3. Observe that a `.boop` BLE message is sent automatically (no user action required)
+4. Verify `didReceiveBoop` fires on the receiving device
+5. Confirm `latestBoopEvent` is set and `BoopInteraction` is created in SwiftData
 
 ## Known Issues & Warnings
-
-### Compiler Warnings in BoopManager.swift
-
-Non-critical warnings about variable mutability:
-- Line 152: `var deviceID` should be `let deviceID`
-- Line 197: `var deviceID` should be `let deviceID`
-- Line 179: Unreachable code after `fatalError()`
-
-These don't affect functionality but should be cleaned up.
 
 ### Edge Cases to Handle
 
@@ -276,7 +230,7 @@ xcodebuild -scheme boop-ios -destination 'id=73770497-2A80-49FC-B44D-D3DD0B34BF9
 ```
 
 **Deployment Target**: iOS 18.2
-**Swift Version**: 5.0
+**Swift Version**: 6.0
 
 ## Next Steps
 
@@ -295,5 +249,5 @@ xcodebuild -scheme boop-ios -destination 'id=73770497-2A80-49FC-B44D-D3DD0B34BF9
 
 ---
 
-**Last Updated**: 2025-11-27
-**Status**: ✅ Bidirectional ranging implemented, builds successfully, ready for device testing
+**Last Updated**: 2026-02-22
+**Status**: ✅ Bidirectional ranging implemented, automatic proximity-based boop flow active

@@ -6,10 +6,10 @@ This app uses a custom binary protocol for Bluetooth Low Energy (BLE) communicat
 ## Message Format
 
 ```
-[Sender UUID: 16 bytes][Message Type: 1 byte][Payload Length: 2 bytes][Payload: variable]
+[Sender UUID: 16 bytes][Message Type: 1 byte][DisplayNameLength: 1 byte][DisplayName: variable][Payload Length: 2 bytes][Payload: variable]
 ```
 
-**Total overhead**: 19 bytes minimum
+**Minimum overhead**: 20 bytes (no display name)
 
 ### Field Details
 
@@ -17,18 +17,24 @@ This app uses a custom binary protocol for Bluetooth Low Energy (BLE) communicat
 |-------|------|------|-------------|
 | Sender UUID | 16 bytes | Binary | UUID of the device sending the message |
 | Message Type | 1 byte | UInt8 | Type of message (see Message Types below) |
-| Payload Length | 2 bytes | UInt16 (big-endian) | Length of payload in bytes (0-65535) |
+| DisplayNameLength | 1 byte | UInt8 | Length of the display name in bytes (0–255) |
+| DisplayName | Variable | UTF-8 | Sender's display name (max 50 bytes UTF-8) |
+| Payload Length | 2 bytes | UInt16 (big-endian) | Length of payload in bytes (0–65535) |
 | Payload | Variable | Binary | Message-specific data |
 
 ## Message Types
 
 ```swift
 enum MessageType: UInt8 {
-    case connectionRequest = 0x01  // Request to connect
-    case connectionAccept = 0x02   // Accept connection request
-    case connectionReject = 0x03   // Reject connection request
-    case textMessage = 0x04        // Text message (UTF-8)
-    case disconnect = 0x05         // Disconnect notification
+    case connectionRequest  = 0x01  // Request to connect
+    case connectionAccept   = 0x02  // Accept connection request
+    case connectionReject   = 0x03  // Reject connection request
+    // 0x04 reserved (previously textMessage, removed)
+    case disconnect         = 0x05  // Disconnect notification
+    case boop               = 0x06  // Automatic proximity-triggered boop
+    case boopRequest        = 0x07  // Manual boop request (reserved for future use)
+    case presence           = 0x08  // Announce display name / profile when connecting
+    case stoppedRanging     = 0x09  // UWB session ended
 }
 ```
 
@@ -37,9 +43,10 @@ enum MessageType: UInt8 {
 ### Encoding Example
 ```swift
 let message = BluetoothMessage(
-    senderUUID: UIDevice.current.identifierForVendor!,
-    messageType: .textMessage,
-    text: "Hello!"
+    senderUUID: localDeviceUUID,
+    messageType: .connectionRequest,
+    displayName: "Aparna",
+    payload: Data()
 )
 let data = message.encode() // Returns Data
 ```
@@ -49,8 +56,10 @@ let data = message.encode() // Returns Data
 if let message = BluetoothMessage.decode(data) {
     print("From: \(message.senderUUID)")
     print("Type: \(message.messageType)")
-    if let text = message.textPayload {
-        print("Message: \(text)")
+    print("Name: \(message.displayName)")
+    if message.messageType == .presence {
+        let profile = message.decodeProfileData()
+        // profile.birthday, profile.bio, profile.gradientColors
     }
 }
 ```
@@ -58,37 +67,40 @@ if let message = BluetoothMessage.decode(data) {
 ## Key Benefits
 
 1. **Type Safety**: Enum-based message types prevent invalid messages
-2. **Schema Enforcement**: Fixed 19-byte header ensures consistent format
+2. **Schema Enforcement**: Fixed 20-byte minimum header ensures consistent format
 3. **Sender Identification**: Every message includes sender UUID, solving the CBATTRequest limitation
-4. **Compact**: ~19 bytes overhead vs 100+ bytes for JSON
-5. **Fast**: Direct byte extraction, no parsing overhead
-6. **Extensible**: Easy to add new message types
+4. **Display Name Inline**: Display name travels with every message, no separate lookup needed
+5. **Compact**: ~20 bytes overhead vs 100+ bytes for JSON
+6. **Fast**: Direct byte extraction, no parsing overhead
+7. **Extensible**: Easy to add new message types
 
 ## Usage in BluetoothManager
 
 ### Sending Messages
 ```swift
-// Send text message (convenience method)
-bluetoothManager.sendTextMessage("Hello!", to: peripheral)
-
-// Send custom message type
+// Send a boop message
 let message = BluetoothMessage(
-    senderUUID: myUUID,
-    messageType: .connectionRequest,
+    senderUUID: localDeviceUUID,
+    messageType: .boop,
+    displayName: userDisplayName,
     payload: Data()
 )
 bluetoothManager.sendMessage(message, to: peripheral)
+
+// Disconnect a peer
+bluetoothManager.disconnect(from: peerUUID)
 ```
 
 ### Receiving Messages
 Messages are automatically decoded in `peripheralManager(_:didReceiveWrite:)`:
 ```swift
-case .textMessage:
-    if let text = message.textPayload {
-        print("💬 Message: \(text)")
-    }
+case .boop:
+    delegate?.didReceiveBoop(from: message.senderUUID, displayName: message.displayName)
+case .presence:
+    let profile = message.decodeProfileData()
+    // Handle birthday, bio, gradientColors
 case .connectionReject:
-    disconnect(from: message.senderUUID) // Now we know who to disconnect!
+    disconnect(from: message.senderUUID)
 ```
 
 ## Future Extensions

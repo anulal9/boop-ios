@@ -33,3 +33,12 @@ To add new shared files:
 Live Activities use the `boop://` URL scheme:
 - `boop://timeline` - Opens the timeline tab
 - `boop://timeline/{interactionID}` - Opens timeline and scrolls to specific interaction
+
+## Gradient Color Encoding
+
+Note that there are two different gradient color encoding schemes in the codebase:
+
+- **`BoopLiveActivityAttributes.gradientColors: [String]`** — stores colors as **hex strings** (e.g. `"#ff7aa2"`)
+- **`Contact.gradientColorsData: [String]`** / **`UserProfile.gradientColorsData: [String]`** — stores colors using a custom named/serialized format via `colorToString()`/`stringToColor()` helpers
+
+When passing gradient colors from a `Contact` to a Live Activity, convert the format accordingly.

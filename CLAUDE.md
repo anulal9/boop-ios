@@ -242,15 +242,30 @@ This ensures:
 
 ### Directory Structure
 
+Top-level workspace:
+```
+boop-ios.xcodeproj/            # Xcode project (open this, not the source folder)
+boop-ios/                      # Main app source root (see below)
+BoopLiveActivity/              # Live Activity widget extension
+│   ├── BoopLiveActivityLiveActivity.swift
+│   ├── BoopLiveActivityBundle.swift
+│   └── Info.plist
+Shared/                        # Code shared between app and widget targets
+│   └── BoopLiveActivityAttributes.swift
+design-tokens/                 # Figma design token JSON source files
+```
+
+Main app source (`boop-ios/`):
 ```
 boop-ios/                              # Source root
 ├── boop_iosApp.swift                  # App entry point, ModelContainer setup
 ├── RootView.swift                     # Auth routing (profile check)
-├── MainTabView.swift                  # 3-tab navigation
+├── MainTabView.swift                  # 4-tab navigation
 ├── BoopTimelineView.swift             # Timeline feed
-├── BoopRangingView.swift              # BLE scanning UI
+├── BoopRangingView.swift              # Proximity-based auto-boop UI
+├── BoopInteractionListView.swift      # Demo/preview list view
 ├── ContactsView.swift                 # Contacts list
-├── ContactDetailView.swift            # Contact detail sheet
+├── ContactDetailView.swift            # Contact detail (navigation push)
 ├── ProfileView.swift                  # Profile display/edit
 ├── ProfileSetupView.swift             # Onboarding flow
 ├── AddManualBoopView.swift            # Manual boop entry sheet
@@ -272,6 +287,7 @@ boop-ios/                              # Source root
 │   └── ViewModifiers+DesignSystem.swift
 ├── Components/
 │   ├── BoopInteractionCard.swift      # Timeline card
+│   ├── BoopInteractionTimelineBody.swift  # Reusable timeline body (shared by BoopTimelineView and ContactDetailView)
 │   ├── ContactInteractionCard.swift   # Contact list card
 │   ├── ProfileDisplayCard.swift
 │   └── Gradient/
@@ -283,20 +299,20 @@ boop-ios/                              # Source root
 │   ├── Contact.swift                  # @Model
 │   ├── UserProfile.swift              # @Model
 │   ├── BoopInteraction.swift          # @Model
-│   ├── Boop.swift                     # Value type for boop data
-│   ├── BoopEvent.swift                # Boop + timestamp wrapper
+│   ├── Boop.swift                     # Value types: Boop struct + BoopEvent (timestamp wrapper)
 │   ├── BluetoothMessage.swift         # Binary BLE protocol
 │   ├── NearbyDevice.swift
 │   ├── ConnectionRequest.swift
 │   ├── ConnectionResponse.swift
 │   ├── AvatarImage.swift
-│   └── BoopLiveActivityAttributes.swift
+│   └── Item.swift                     # Legacy scaffolding
 ├── UserDefaults/
 │   ├── UserDefaultsKeys.swift
 │   └── UserDefaultsUtility.swift
-└── Utilities/
-    ├── LiveActivityManager.swift
-    └── StringSanitization.swift
+├── Utilities/
+│   ├── LiveActivityManager.swift
+│   └── StringSanitization.swift
+└── Widgets/                           # Reserved, currently empty
 ```
 
 ### Persisted Data Store
@@ -350,11 +366,11 @@ Top-level BLE coordinator. Owns the `BluetoothManagerServiceImpl` (central + per
 
 - `start()` / `stop()` — starts/stops BLE advertising, scanning, and UWB
 - `getNearbyDevices()` → `[UUID: DevicePositionCategory]`
-- `sendMessage()` / `sendPresence()` — sends BLE messages to specific devices
+- `sendMessage(_:to:)` / `disconnect(from:)` — sends BLE messages to or disconnects specific devices
 - `localDeviceUUID` — persisted in UserDefaults, stable across sessions
 - Publishes `nearbyDevices` from UWBManager's Combine publisher
 
-#### BluetoothManagerService (`Bluetooth/BluetoothManagerService.swift`, `@MainActor`)
+#### BluetoothManagerService (`Bluetooth/BluetoothManagerService.swift`)
 
 Implements **dual-mode BLE** — the device acts as both peripheral (advertising) and central (scanning) simultaneously.
 
@@ -374,9 +390,10 @@ Token ACK:   D3A42A7F-... (.notify)
 
 **Message Types:**
 - `0x01` connectionRequest, `0x02` accept, `0x03` reject, `0x05` disconnect
-- `0x06` boop (mutual boop confirmed)
-- `0x07` boopRequest (user selected device)
+- `0x06` boop (automatic proximity-triggered boop)
+- `0x07` boopRequest (manual boop request, reserved)
 - `0x08` presence (name/profile announcement)
+- `0x09` stoppedRanging (UWB session ended)
 
 **Delegates:**
 - `BluetoothServiceDelegate` — connection events, UWB token exchange
@@ -386,10 +403,10 @@ Token ACK:   D3A42A7F-... (.notify)
 
 **Per-device NISession architecture** — each connected peer gets its own `NISession` instance.
 
-**Distance Thresholds:**
-- ≤ 5cm → `ApproxTouching` (boop range)
-- ≤ 50cm → `InRange` (nearby)
-- \> 50cm → `OutOfRange`
+**Distance Thresholds** (defined in `UWBService.swift`):
+- ≤ 7cm (0.07m) → `ApproxTouching` (boop range)
+- ≤ 100cm (1.0m) → `InRange` (nearby)
+- \> 100cm → `OutOfRange`
 
 **Flow:** Discovery tokens are exchanged via BLE characteristics. Once both peers have each other's token, ranging begins via `NINearbyPeerConfiguration`. Distance updates publish to `nearbyDevices: [UUID: DevicePositionCategory]` via Combine.
 
@@ -398,18 +415,16 @@ Token ACK:   D3A42A7F-... (.notify)
 Central orchestrator tying BLE + UWB + UI together. Injected as `@StateObject` at the app root and passed via `@EnvironmentObject`.
 
 **Key Published State:**
-- `latestBoopEvent: BoopEvent?` — triggers timeline overlay animation on new boops
-- `mySelections: Set<UUID>` / `theirSelections: Set<UUID>` — mutual selection tracking
-- `displayNames: [UUID: String]` — maps peer UUIDs to display names
+- `latestBoopEvent: BoopEvent?` — triggers proximity overlay animation on new boops
 
-**Mutual Boop Flow:**
-1. User taps a device → `selectDevice(deviceID)` adds to `mySelections`, sends `.boopRequest`
-2. Remote peer does the same → `didReceiveBoopRequest` adds to `theirSelections`
-3. `checkForMutualSelection()` detects both sets contain the peer
-4. Sends `.boop` message, clears selections, creates `BoopEvent`
-5. `latestBoopEvent` triggers UI overlay + SwiftData persistence in `BoopTimelineView`
+**Automatic Boop Flow:**
+1. `BoopManager` subscribes to `bluetoothManager.nearbyDevices` via Combine
+2. `compareNearbyDevicesUpdate(_:)` detects a device entering `.ApproxTouching` state
+3. If not in cooldown for that peer, sends a `.boop` BLE message automatically
+4. `didReceiveBoop(from:displayName:)` creates a `BoopEvent`, sets `latestBoopEvent`
+5. `BoopRangingView.onChange(of: latestBoopEvent)` fires `handleNewBoop()` → creates `Contact` + `BoopInteraction` in SwiftData
 
-**Observer Pattern:** Subscribes to `bluetoothManager.nearbyDevices` publisher. On device discovery, sends presence. On disconnect, cleans up selections.
+**Observer Pattern:** Subscribes to `bluetoothManager.nearbyDevices` publisher via Combine. When a device enters touching range, triggers an automatic boop. On disconnect, cleans up state.
 
 ### View + Model Pattern
 
@@ -420,15 +435,16 @@ boop_iosApp (ModelContainer + BoopManager)
   └─ RootView (checks if profile exists)
        ├─ ProfileSetupView (onboarding, requireAllFields=true)
        └─ MainTabView
-            ├─ Tab 1: BoopTimelineView
+            ├─ Tab 1: BoopTimelineView (clock.fill)
             │    ├─ Toolbar: "+" → AddManualBoopView (sheet)
             │    ├─ @Query BoopInteraction (sorted by timestamp desc)
             │    └─ NavigationLink → interaction detail
-            ├─ Tab 2: ContactsView
-            │    ├─ Toolbar: "+" → BoopRangingView (sheet)
+            ├─ Tab 2: BoopRangingView (hand.tap.fill)
+            │    └─ Proximity-based auto-boop UI (ProgressView + display name overlay)
+            ├─ Tab 3: ContactsView (person.2)
             │    ├─ @Query Contact
-            │    └─ Tap → ContactDetailView (sheet)
-            └─ Tab 3: ProfileView
+            │    └─ NavigationLink → ContactDetailView (navigation push)
+            └─ Tab 4: ProfileView (person.crop.circle)
                  ├─ Display mode (gradient bg + profile card)
                  ├─ Edit mode (ProfileSetupView, requireAllFields=false)
                  └─ Customize mode (color picker)
@@ -445,15 +461,17 @@ boop_iosApp (ModelContainer + BoopManager)
 
 #### Data Flow: Boop → Timeline
 
-1. UWB detects touching distance → BLE exchanges mutual boop messages
-2. `BoopManager.didReceiveBoop()` creates `BoopEvent`, sets `latestBoopEvent`
-3. `BoopTimelineView.onChange(of: latestBoopEvent)` fires `handleNewBoop()`
+1. UWB detects touching distance → `BoopManager` automatically sends `.boop` BLE message
+2. `BoopManager.didReceiveBoop(from:displayName:)` creates `BoopEvent`, sets `latestBoopEvent`
+3. `BoopRangingView.onChange(of: latestBoopEvent)` fires `handleNewBoop()`
 4. `handleNewBoop()` finds/creates `Contact`, creates `BoopInteraction`, inserts into `modelContext`
-5. `@Query` automatically picks up the new interaction → UI updates
+5. `BoopTimelineView.onChange(of: latestBoopEvent)` fires `handleBoopVisual()` — shows display name overlay animation only
+6. `@Query` automatically picks up the new interaction → UI updates
 
 #### Card Components
 
-- **`BoopInteractionCard`** — timeline items with title, location, relative time, overlapping thumbnails. Uses `TimelineView(.periodic(by: 60))` for auto-refreshing timestamps.
+- **`BoopInteractionCard`** — timeline items with title, location, relative time, overlapping thumbnails. Uses `TimelineView(.periodic(from: .now, by: 60))` for auto-refreshing timestamps.
+- **`BoopInteractionTimelineBody`** — reusable timeline body (section headers + cards) extracted from `BoopTimelineView`; used by both `BoopTimelineView` and `ContactDetailView`'s boop history section.
 - **`ContactInteractionCard`** — contact list items with name, boop count, last boop time
 - **`AnimatedMeshGradient`** — 3x3 MeshGradient with configurable wave animation (vertical/horizontal), used for profile backgrounds
 
@@ -629,11 +647,12 @@ Declared in `Info.plist`:
 
 ### Handling Boop Events
 
-1. Listen to `BoopManager.latestBoopEvent` via `.onChange(of:)`
-2. Create `BoopInteraction` and `Contact` models
-3. Insert into `modelContext`
-4. SwiftData automatically updates all `@Query` views
-5. Show UI feedback (animations, overlays)
+Persistence is handled in `BoopRangingView`:
+1. Listen to `BoopManager.latestBoopEvent` via `.onChange(of:)` in `BoopRangingView`
+2. `handleNewBoop()` finds/creates `Contact` and creates `BoopInteraction`
+3. Insert both into `modelContext`
+4. SwiftData automatically updates all `@Query` views (e.g. `BoopTimelineView`)
+5. `BoopTimelineView` separately listens to `latestBoopEvent` to show a display name overlay animation only
 
 ## Debugging Tips
 

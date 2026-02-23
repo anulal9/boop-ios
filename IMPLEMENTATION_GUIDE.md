@@ -31,9 +31,9 @@ Generated from your Figma design tokens:
   - LayoutConstant: thumbnailGap, cardContentGap
 
 ### 2. Data Model (`boop-ios/model/`)
-- **BoopInteraction.swift** - Model for interaction card data
-  - Properties: title, location, date, time, thumbnails
-  - Sample data for previews
+- **BoopInteraction.swift** - SwiftData `@Model` for boop interaction records
+  - Properties: `id: UUID`, `title: String`, `location: String`, `timestamp: Date`, `imageData: [Data]`, `contact: Contact?`
+  - Thumbnail count derived from `imageData.count`
 
 ### 3. Component (`boop-ios/Components/`)
 - **BoopInteractionCard.swift** - Main card component
@@ -51,16 +51,14 @@ Generated from your Figma design tokens:
 
 ## 🔧 Integration Steps
 
-### Step 1: Add Files to Xcode Project
+> **Note:** All files listed below are already integrated into the Xcode project. The steps below are for reference if adding new files in the future.
+
+### Step 1: Add Files to Xcode Project (future reference)
 
 1. Open `boop-ios.xcodeproj` in Xcode
 2. Right-click on `boop-ios` folder in Project Navigator
 3. Select "Add Files to boop-ios..."
-4. Add these folders:
-   - `DesignSystem/` (all 4 files)
-   - `Components/` (BoopInteractionCard.swift)
-   - `model/BoopInteraction.swift`
-   - `BoopInteractionListView.swift`
+4. Select the new file(s)
 5. Make sure "Copy items if needed" is UNCHECKED (files are already in place)
 6. Make sure target is checked: ☑️ boop-ios
 
@@ -101,13 +99,8 @@ BoopInteractionCard(
     interaction: BoopInteraction(
         title: "Hang with Aparna",
         location: "Stuytown, NYC",
-        date: "Yesterday",
-        time: "3pm",
-        thumbnails: [image1]  // Add actual UIImages
-    ),
-    onTap: {
-        // Handle tap
-    }
+        timestamp: Date()
+    )
 )
 ```
 
