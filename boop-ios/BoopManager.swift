@@ -13,9 +13,6 @@ class BoopManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published var latestBoopEvent: BoopEvent? = nil
 
-    /// Track display names for discovered devices (keyed by sender's local UUID)
-    @Published var displayNames: [UUID: String] = [:]
-
     /// Map peripheral UUIDs to sender's local UUIDs
     private var peripheralToSenderUUID: [UUID: UUID] = [:]
 
@@ -72,35 +69,11 @@ class BoopManager: NSObject, ObservableObject {
         print("📊 BoopManager: nearbyDevices updated - count: \(deviceIDs.count)")
         print("📊 BoopManager: Device IDs: \(deviceIDs.map { $0.uuidString.prefix(8) })")
 
-        sendPresenceToNewDevices(currentDeviceIDs: deviceIDs)
         checkNearbyDevicesForBoops(devices)
         cleanUpDisconnectedDevices(currentDeviceIDs: deviceIDs)
 
         previousPositions = devices
         previousDevices = deviceIDs
-    }
-
-    private func sendPresenceToNewDevices(currentDeviceIDs: Set<UUID>) {
-        let newDevices = currentDeviceIDs.subtracting(previousDevices)
-        if !newDevices.isEmpty {
-            print("🆕 BoopManager: Detected \(newDevices.count) new device(s)")
-        }
-        for deviceID in newDevices {
-            Task {
-                if let displayName = try? await self.displayName.value {
-                    let profile = await DataStore.shared.getUserProfile()
-                    print("👋 BoopManager: Sending presence to \(deviceID.uuidString.prefix(8)) with name '\(displayName)'")
-                    self.getOrCreateBluetoothManager().sendPresence(
-                        to: deviceID,
-                        displayName: displayName,
-                        birthday: profile?.birthday,
-                        bio: profile?.bio
-                    )
-                } else {
-                    print("⚠️ BoopManager: Could not get display name for presence")
-                }
-            }
-        }
     }
 
     private func checkNearbyDevicesForBoops(_ devices: [UUID: DevicePositionCategory]) {
@@ -121,9 +94,7 @@ class BoopManager: NSObject, ObservableObject {
     }
 
     private func cleanUpDisconnectedDevices(currentDeviceIDs: Set<UUID>) {
-        displayNames = displayNames.filter { currentDeviceIDs.contains($0.key) }
         lastBoopTime = lastBoopTime.filter { currentDeviceIDs.contains($0.key) }
-        print("📊 BoopManager: Current displayNames: \(displayNames.mapValues { $0 })")
     }
     
     func start() {
@@ -175,12 +146,8 @@ extension BoopManager: BoopDelegate {
     func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         print("🎉 BoopManager: Received boop from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
-        // Store mapping and display name
+        // Store mapping
         peripheralToSenderUUID[peripheralUUID] = senderUUID
-        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
-
-        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
-        print("📊 BoopManager: Total stored names: \(displayNames.count)")
 
         // Convert gradient color strings to Color objects
         let colors = gradientColors.compactMap { colorString -> Color? in
@@ -215,24 +182,7 @@ extension BoopManager: BoopDelegate {
     func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
         print("📨 BoopManager: Received boop request from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
 
-        // Store mapping and display name
+        // Store mapping
         peripheralToSenderUUID[peripheralUUID] = senderUUID
-        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
-
-        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
-        print("📊 BoopManager: Total stored names: \(displayNames.count)")
-    }
-
-    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
-        print("👋 BoopManager: Received presence from sender: \(senderUUID.uuidString.prefix(8)), peripheral: \(peripheralUUID.uuidString.prefix(8)), displayName: '\(displayName)'")
-
-        // Store mapping and display name
-        peripheralToSenderUUID[peripheralUUID] = senderUUID
-        displayNames[peripheralUUID] = displayName  // Store by peripheral UUID for UI lookup
-
-        print("💾 BoopManager: Stored display name '\(displayName)' for peripheral \(peripheralUUID.uuidString.prefix(8))")
-        print("🔗 BoopManager: Mapped peripheral \(peripheralUUID.uuidString.prefix(8)) → sender \(senderUUID.uuidString.prefix(8))")
-        print("📊 BoopManager: Total stored names: \(displayNames.count)")
-        print("📊 BoopManager: All stored names: \(displayNames)")
     }
 }

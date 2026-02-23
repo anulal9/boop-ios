@@ -101,20 +101,6 @@ class BluetoothManager: NSObject, ObservableObject {
         }
     }
 
-    func sendPresence(to device: UUID, displayName: String, birthday: Date? = nil, bio: String? = nil) {
-        print("📤 BT Manager: Sending presence to \(device.uuidString.prefix(8))")
-        print("📤 BT Manager: My UUID: \(localDeviceUUID.uuidString.prefix(8)), My displayName: '\(displayName)'")
-        let message = BluetoothMessage(
-            senderUUID: localDeviceUUID,
-            messageType: .presence,
-            displayName: displayName,
-            birthday: birthday,
-            bio: bio,
-            gradientColors: []
-        )
-        sendMessage(message, to: device)
-    }
-
     func disconnect(from deviceID: UUID) {
         Task {
             guard let peripheral = connectedPeripherals[deviceID] else {

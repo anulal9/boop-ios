@@ -21,61 +21,17 @@ struct BoopRangingView: View {
     private let animationDuration: TimeInterval = 2
     private let duplicateWindow: TimeInterval = 3
 
-    private var nearbyDevices: [NearbyDevice] {
-        let devices = boopManager.getNearbyDevices()
-        print("🎨 BoopRangingView: Building UI for \(devices.count) nearby device(s)")
-
-        let result = devices.map { (id, distance) in
-            // Check if this device is a saved contact
-            let savedContact = contacts.first(where: { $0.uuid == id })
-
-            // Prefer saved contact name, then transmitted name, then fallback
-            let displayName = savedContact?.displayName
-                ?? boopManager.displayNames[id]
-                ?? "Unknown User"
-
-            print("🎨 BoopRangingView: Device \(id.uuidString.prefix(8))")
-            print("   - Saved contact: \(savedContact?.displayName ?? "nil")")
-            print("   - Transmitted name: \(boopManager.displayNames[id] ?? "nil")")
-            print("   - Final displayName: '\(displayName)'")
-
-            return NearbyDevice(
-                id: id,
-                displayName: displayName,
-                distance: distance,
-                isSelected: false
-            )
-        }
-        .sorted { $0.distance.rawValue < $1.distance.rawValue }
-
-        return result
-    }
-
     var body: some View {
         NavigationStack {
             VStack(spacing: Spacing.lg) {
-                // Devices list
-                if nearbyDevices.isEmpty {
-                    VStack(spacing: Spacing.lg) {
-                        Spacer()
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(.accentPrimary)
+                Spacer()
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.accentPrimary)
 
-                        Text("Looking for friends nearby...")
-                            .subtitleStyle()
-                        Spacer()
-                    }
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: Spacing.md) {
-                            ForEach(nearbyDevices) { device in
-                                DeviceRow(device: device)
-                            }
-                        }
-                        .padding(.horizontal, Spacing.md)
-                    }
-                }
+                Text("Tap to boop")
+                    .subtitleStyle()
+                Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pageBackground()
@@ -200,27 +156,4 @@ struct BoopRangingView: View {
     }
 }
 
-// MARK: - Device Row Component
-struct DeviceRow: View {
-    let device: NearbyDevice
 
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            // Distance indicator
-            Text(device.distanceEmoji)
-                .font(.system(size: 30))
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(device.displayName)
-                    .heading2Style()
-
-                Text(device.distanceText)
-                    .subtitleStyle()
-            }
-
-            Spacer()
-        }
-        .padding(Spacing.md)
-        .cardStyle()
-    }
-}

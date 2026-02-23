@@ -28,7 +28,6 @@ protocol BluetoothServiceDelegate: AnyObject {
 protocol BoopDelegate: AnyObject {
     func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
     func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
-    func didReceivePresence(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
 }
 
 // MARK: - Service Protocol
@@ -281,10 +280,7 @@ extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralMan
                     self.boopDelegate?
                         .didReceiveBoopRequest(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio, gradientColors: gradientColors)
                 case .presence:
-                    print("👋 BLE Service: Routing presence message to delegate")
-                    let (birthday, bio, gradientColors) = message.decodeProfileData()
-                    self.boopDelegate?
-                        .didReceivePresence(from: message.senderUUID, peripheralUUID: peripheralUUID, displayName: message.displayName, birthday: birthday, bio: bio, gradientColors: gradientColors)
+                    print("👋 BLE Service: Ignoring presence message (feature removed)")
                 case .connectionRequest:
                     self.bleServiceDelegate?.didReceiveConnectionRequest(from: message.senderUUID)
                 case .connectionAccept:
