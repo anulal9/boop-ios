@@ -110,7 +110,7 @@ struct BoopTimelineView: View {
                 AddManualBoopView()
             }
             .navigationDestination(for: BoopInteraction.self) { interaction in
-                VStack(spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
                     Text("Boop Detail")
                         .heading1Style()
                     
@@ -127,6 +127,7 @@ struct BoopTimelineView: View {
                     
                     Spacer()
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .padding()
                 .pageBackground()
             }
