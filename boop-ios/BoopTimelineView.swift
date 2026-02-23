@@ -10,10 +10,8 @@ import SwiftData
 
 struct BoopTimelineView: View {
     @EnvironmentObject var boopManager: BoopManager
-    @Environment(\.modelContext) private var modelContext
     @Query(sort: \BoopInteraction.timestamp, order: .reverse)
     private var allInteractions: [BoopInteraction]
-    @Query private var contacts: [Contact]
     @State private var showBoop = false
     @State private var showAddManualBoop = false
     @State private var currentBoopDisplayName: String = ""
@@ -151,59 +149,16 @@ struct BoopTimelineView: View {
             .onChange(of: boopManager.latestBoopEvent) { _, newValue in
                 // Only show animation if Timeline is the active tab
                 guard let event = newValue, !showBoop else { return }
-                handleNewBoop(event: event)
+                handleBoopVisual(event: event)
             }
         }
     }
 
-    private func handleNewBoop(event: BoopEvent) {
+    private func handleBoopVisual(event: BoopEvent) {
         let boop = event.boop
 
         // Store display name for modal
         currentBoopDisplayName = boop.displayName
-
-        // Persist to SwiftData
-        let contactUUID = boop.senderUUID
-
-        // Find or create contact
-        let contact: Contact
-        if let existingContact = contacts.first(where: { $0.uuid == contactUUID }) {
-            contact = existingContact
-            // Update contact with latest profile data
-            contact.displayName = boop.displayName
-            contact.birthday = boop.birthday
-            contact.bio = boop.bio
-            contact.gradientColorsData = boop.gradientColors.map { Contact.colorToString($0) }
-        } else {
-            // Create new contact with profile data
-            contact = Contact(
-                uuid: contactUUID,
-                displayName: boop.displayName,
-                avatarData: nil,
-                birthday: boop.birthday,
-                bio: boop.bio,
-                gradientColors: boop.gradientColors
-            )
-            modelContext.insert(contact)
-        }
-
-        // Create interaction with contact relationship
-        let newInteraction = BoopInteraction(
-            title: boop.displayName,
-            location: "temp - todo",
-            timestamp: event.timestamp,
-            contact: contact  // Set relationship
-        )
-        modelContext.insert(newInteraction)  // Insert as top-level entity
-        contact.interactions.append(newInteraction)  // Also add to contact's array
-
-        // Start Live Activity
-        LiveActivityManager.shared.startBoopLiveActivity(
-            contactName: boop.displayName,
-            contactID: contactUUID,
-            interactionID: newInteraction.id,
-            gradientColors: boop.gradientColors.map { Contact.colorToString($0) }
-        )
 
         // Show modal (only if Timeline view is visible)
         showBoop = true

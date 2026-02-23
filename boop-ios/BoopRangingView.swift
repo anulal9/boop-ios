@@ -13,10 +13,13 @@ struct BoopRangingView: View {
     @EnvironmentObject var boopManager: BoopManager
     @Environment(\.modelContext) private var modelContext
     @Query private var contacts: [Contact]
+    @Query(sort: \BoopInteraction.timestamp, order: .reverse)
+    private var allInteractions: [BoopInteraction]
     @State private var showBoop = false
     @State private var currentBoopDisplayName: String = ""
 
     private let animationDuration: TimeInterval = 2
+    private let duplicateWindow: TimeInterval = 3
 
     private var nearbyDevices: [NearbyDevice] {
         let devices = boopManager.getNearbyDevices()
@@ -151,6 +154,16 @@ struct BoopRangingView: View {
             modelContext.insert(contact)
         }
 
+        guard !isDuplicateInteraction(for: contactUUID, displayName: boop.displayName, timestamp: event.timestamp) else {
+            print("⏭️ BoopRangingView: Skipping duplicate interaction for \(contactUUID.uuidString.prefix(8))")
+            showBoop = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
+                showBoop = false
+                isPresented?.wrappedValue = false
+            }
+            return
+        }
+
         // Create interaction with contact relationship
         let newInteraction = BoopInteraction(
             title: boop.displayName,
@@ -161,6 +174,13 @@ struct BoopRangingView: View {
         modelContext.insert(newInteraction)  // Insert as top-level entity
         contact.interactions.append(newInteraction)  // Also add to contact's array
 
+        LiveActivityManager.shared.startBoopLiveActivity(
+            contactName: boop.displayName,
+            contactID: contactUUID,
+            interactionID: newInteraction.id,
+            gradientColors: boop.gradientColors.map { Contact.colorToString($0) }
+        )
+
         // Show modal
         showBoop = true
 
@@ -168,6 +188,14 @@ struct BoopRangingView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
             showBoop = false
             isPresented?.wrappedValue = false
+        }
+    }
+
+    private func isDuplicateInteraction(for contactUUID: UUID, displayName: String, timestamp: Date) -> Bool {
+        allInteractions.contains { interaction in
+            guard interaction.contact?.uuid == contactUUID else { return false }
+            guard interaction.title == displayName else { return false }
+            return abs(interaction.timestamp.timeIntervalSince(timestamp)) <= duplicateWindow
         }
     }
 }
