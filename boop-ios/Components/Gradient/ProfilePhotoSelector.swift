@@ -23,13 +23,13 @@ struct ProfilePhotoSelector: View {
                             .fill(.ultraThinMaterial)
                             .overlay {
                                 Circle()
-                                    .stroke(Color.white.opacity(0.2), lineWidth: 2)
+                                    .stroke(Color.textPrimary.opacity(0.2), lineWidth: 2)
                             }
 
                         Image(systemName: "person.fill")
                             .resizable()
                             .aspectRatio(contentMode: .fit)
-                            .foregroundColor(Color.white.opacity(0.6))
+                            .foregroundColor(.textPrimary.opacity(0.6))
                             .padding(60)
                     }
                 }
@@ -44,13 +44,13 @@ struct ProfilePhotoSelector: View {
                             .fill(.ultraThinMaterial)
                             .overlay {
                                 Circle()
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
+                                    .stroke(Color.textPrimary.opacity(0.3), lineWidth: 1.5)
                             }
 
                         Image(systemName: "camera.fill")
                             .resizable()
                             .scaledToFit()
-                            .foregroundColor(.white)
+                            .foregroundColor(.textPrimary)
                             .frame(width: 28, height: 28)
                     }
                     .frame(width: cameraCircleSize, height: cameraCircleSize)

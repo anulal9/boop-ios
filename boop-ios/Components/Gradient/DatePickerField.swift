@@ -39,16 +39,16 @@ struct DatePickerField: View {
             showingPicker = true
         }) {
             Text(displayText)
-                .foregroundStyle(displayText == placeholder ? Color.white.opacity(0.6) : Color.white)
+                .foregroundStyle(displayText == placeholder ? Color.textPrimary.opacity(0.6) : Color.textPrimary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 12)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.md)
                 .frame(maxWidth: .infinity)
                 .background(.ultraThinMaterial)
-                .cornerRadius(12)
+                .cornerRadius(CornerRadius.lg)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: CornerRadius.lg)
+                        .stroke(Color.textPrimary.opacity(0.2), lineWidth: 1)
                 }
                 .frame(height: 44)
         }
@@ -168,8 +168,8 @@ private struct DatePickerSheet: View {
                 }
                 .opacity(0)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.xl)
 
             // Native iOS Date Picker with wheel style
             DatePicker(
@@ -190,7 +190,7 @@ private struct DatePickerSheet: View {
                 onDismiss()
             }
             // Info text
-            HStack(spacing: 8) {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 14))
                     .foregroundColor(.black)
@@ -199,7 +199,7 @@ private struct DatePickerSheet: View {
                     .font(.system(size: 14))
                     .foregroundColor(.black)
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, Spacing.xl)
         }
         .background(.ultraThinMaterial)
     }

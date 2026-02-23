@@ -22,7 +22,7 @@ struct ContactInteractionCard: View {
                         .frame(width: thumbnailWidth(for: last), height: ThumbnailSize.single)
                 } else {
                     Circle()
-                        .fill(Color.gray.opacity(0.3))
+                        .fill(Color.formBackgroundInactive)
                         .overlay(
                             Circle()
                                 .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -72,8 +72,7 @@ struct ContactInteractionCard: View {
             .frame(height: ComponentSize.cardHeight)
         }
         .buttonStyle(PlainButtonStyle())
-        .background(Color.backgroundSecondary)
-        .cornerRadius(CornerRadius.md)
+        .cardStyle()
     }
 
     // Helper for thumbnail width
@@ -116,7 +115,7 @@ struct ContactInteractionThumbnail: View {
         switch interaction.thumbnailCount {
         case 1:
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -125,7 +124,7 @@ struct ContactInteractionThumbnail: View {
         case 2:
             ZStack(alignment: .topLeading) {
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.formBackgroundInactive)
                     .overlay(
                         Circle()
                             .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -133,7 +132,7 @@ struct ContactInteractionThumbnail: View {
                     .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
                     .position(x: ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.formBackgroundInactive)
                     .overlay(
                         Circle()
                             .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -145,7 +144,7 @@ struct ContactInteractionThumbnail: View {
         case 3...:
             ZStack(alignment: .topLeading) {
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.formBackgroundInactive)
                     .overlay(
                         Circle()
                             .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -153,7 +152,7 @@ struct ContactInteractionThumbnail: View {
                     .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
                     .position(x: ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.formBackgroundInactive)
                     .overlay(
                         Circle()
                             .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -161,7 +160,7 @@ struct ContactInteractionThumbnail: View {
                     .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
                     .position(x: ThumbnailOffset.middle + ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
                 Circle()
-                    .fill(Color.gray.opacity(0.3))
+                    .fill(Color.formBackgroundInactive)
                     .overlay(
                         Circle()
                             .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -203,7 +202,7 @@ struct ContactInteractionThumbnail: View {
     // Single circular thumbnail
     private var singleThumbnail: some View {
         Circle()
-            .fill(Color.gray.opacity(0.3))
+            .fill(Color.formBackgroundInactive)
             .overlay(
                 Circle()
                     .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -216,7 +215,7 @@ struct ContactInteractionThumbnail: View {
         ZStack(alignment: .topLeading) {
             // Left thumbnail (back)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -226,7 +225,7 @@ struct ContactInteractionThumbnail: View {
 
             // Right thumbnail (front)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -242,7 +241,7 @@ struct ContactInteractionThumbnail: View {
         ZStack(alignment: .topLeading) {
             // Front thumbnail (leftmost)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -252,7 +251,7 @@ struct ContactInteractionThumbnail: View {
 
             // Middle thumbnail
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -262,7 +261,7 @@ struct ContactInteractionThumbnail: View {
 
             // Back thumbnail (rightmost)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)

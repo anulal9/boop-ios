@@ -141,16 +141,16 @@ struct ProfileView: View {
                     .scrollContentBackground(.hidden)
                     
                     // Display customization controls
-                    VStack(spacing: 16) {
+                    VStack(spacing: Spacing.lg) {
                         Button(action: {
                             showColorPicker = true
                         }) {
                             HStack {
                                 Text("Gradient Colors")
-                                    .foregroundStyle(.white)
+                                    .foregroundColor(.textPrimary)
                                     .font(.headline)
                                 Spacer()
-                                HStack(spacing: 4) {
+                                HStack(spacing: Spacing.xs) {
                                     ForEach(Array(Set(gradientColors)).prefix(2), id: \.self) { color in
                                         Circle()
                                             .fill(color)
@@ -160,7 +160,7 @@ struct ProfileView: View {
                             }
                             .padding()
                             .background(.ultraThinMaterial)
-                            .cornerRadius(12)
+                            .cornerRadius(CornerRadius.lg)
                         }
                         .buttonStyle(.plain)
                         .padding(.horizontal)
@@ -284,14 +284,14 @@ private struct DisplayColorPickerSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 Text("Select 2 Colors")
                     .font(.headline)
                     .padding(.top)
                 
                 Text("Choose two colors for your gradient")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.textMuted)
                 
                 // Live preview
                 ZStack {
@@ -301,11 +301,11 @@ private struct DisplayColorPickerSheet: View {
                         duration: 3.0
                     )
                     .frame(height: 120)
-                    .cornerRadius(12)
+                    .cornerRadius(CornerRadius.lg)
                 }
                 .padding(.horizontal)
                 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: Spacing.lg) {
                     ForEach(availableColors, id: \.self) { color in
                         Button(action: {
                             toggleColorSelection(color)
@@ -322,8 +322,8 @@ private struct DisplayColorPickerSheet: View {
                                     
                                     if let index = selectedColors.firstIndex(of: color) {
                                         Text("\(index + 1)")
-                                            .font(.system(size: 24, weight: .bold))
-                                            .foregroundColor(.white)
+                                            .font(.heading2)
+                                            .foregroundColor(.textPrimary)
                                             .shadow(radius: 2)
                                     }
                                 }
@@ -342,9 +342,9 @@ private struct DisplayColorPickerSheet: View {
                     Text("Apply")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(selectedColors.count == 2 ? Color.blue : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .background(selectedColors.count == 2 ? Color.accentPrimary : Color.formBackgroundInactive)
+                        .foregroundColor(.textPrimary)
+                        .cornerRadius(CornerRadius.lg)
                 }
                 .disabled(selectedColors.count != 2)
                 .padding()

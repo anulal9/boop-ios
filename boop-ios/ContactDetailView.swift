@@ -42,11 +42,11 @@ struct ContactDetailView: View {
                                 Image(systemName: "clock.arrow.circlepath")
                                     .foregroundColor(.accentPrimary)
                                 Text("Boop History")
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.textPrimary)
                                 Spacer()
                                 Text("\(contact.interactions.count)")
                                     .subtitleStyle()
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.textMuted)
                             }
                             .padding(.vertical, Spacing.sm)
                         }

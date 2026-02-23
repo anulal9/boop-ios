@@ -101,8 +101,7 @@ struct AddManualBoopView: View {
                         .datePickerStyle(.graphical)
                         .tint(.accentPrimary)
                         .padding(Spacing.md)
-                        .background(Color.backgroundSecondary)
-                        .cornerRadius(CornerRadius.md)
+                        .cardStyle()
                         .padding(.horizontal, Spacing.lg)
                     }
 

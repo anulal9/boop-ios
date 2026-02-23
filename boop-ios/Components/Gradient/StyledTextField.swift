@@ -6,17 +6,17 @@ struct StyledTextField: View {
     @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.white.opacity(0.6)), axis: .vertical)
-            .foregroundStyle(.white)
-            .tint(.white)
+        TextField("", text: $text, prompt: Text(placeholder).foregroundColor(.textPrimary.opacity(0.6)), axis: .vertical)
+            .foregroundColor(.textPrimary)
+            .tint(.textPrimary)
             .multilineTextAlignment(.center)
             .focused($isFocused)
-            .padding(12)
+            .padding(Spacing.md)
             .background(.ultraThinMaterial)
-            .cornerRadius(12)
+            .cornerRadius(CornerRadius.lg)
             .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: CornerRadius.lg)
+                    .stroke(Color.textPrimary.opacity(0.2), lineWidth: 1)
             }
             .onTapGesture {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

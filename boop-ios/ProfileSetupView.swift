@@ -178,16 +178,16 @@ private struct ColorPickerSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: Spacing.xl) {
                 Text("Select 2 Colors")
                     .font(.headline)
                     .padding(.top)
                 
                 Text("Choose two colors for your gradient")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.textMuted)
                 
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 16) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: Spacing.lg) {
                     ForEach(availableColors, id: \.self) { color in
                         Button(action: {
                             toggleColorSelection(color)
@@ -204,8 +204,8 @@ private struct ColorPickerSheet: View {
                                     
                                     if let index = selectedColors.firstIndex(of: color) {
                                         Text("\(index + 1)")
-                                            .font(.system(size: 24, weight: .bold))
-                                            .foregroundColor(.white)
+                                            .font(.heading2)
+                                            .foregroundColor(.textPrimary)
                                             .shadow(radius: 2)
                                     }
                                 }
@@ -224,9 +224,9 @@ private struct ColorPickerSheet: View {
                     Text("Apply")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(selectedColors.count == 2 ? Color.blue : Color.gray)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                        .background(selectedColors.count == 2 ? Color.accentPrimary : Color.formBackgroundInactive)
+                        .foregroundColor(.textPrimary)
+                        .cornerRadius(CornerRadius.lg)
                 }
                 .disabled(selectedColors.count != 2)
                 .padding()

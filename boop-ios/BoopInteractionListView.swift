@@ -40,9 +40,9 @@ struct BoopInteractionListView: View {
                     Button(action: {}) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: IconSize.standard, weight: .medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(.textPrimary)
                             .frame(width: ComponentSize.buttonSize, height: ComponentSize.buttonSize)
-                            .background(Color.white.opacity(0.9))
+                            .background(Color.backgroundSecondary)
                             .clipShape(Circle())
                     }
                     .padding(.leading, Spacing.lg)
@@ -91,11 +91,11 @@ struct BoopInteractionListView: View {
                 // Page Control
                 HStack(spacing: Spacing.sm) {
                     Circle()
-                        .fill(Color.white)
+                        .fill(Color.textPrimary)
                         .frame(width: IconSize.dot, height: IconSize.dot)
 
                     Circle()
-                        .fill(Color.white.opacity(0.3))
+                        .fill(Color.textPrimary.opacity(0.3))
                         .frame(width: IconSize.dot, height: IconSize.dot)
                 }
                 .padding(.vertical, Spacing.lg)

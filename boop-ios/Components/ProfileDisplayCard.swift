@@ -26,14 +26,14 @@ struct ProfileDisplayCard: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.textMuted)
                     .frame(maxWidth: .infinity)
             }
             
             // Display Name
             Text(displayName)
                 .heading1Style()
-                .foregroundColor(.white)
+                .foregroundColor(.textPrimary)
             
             // Birthday
             if let birthday = birthday {
@@ -42,14 +42,14 @@ struct ProfileDisplayCard: View {
                         .foregroundColor(.accentPrimary)
                     Text(birthday.formatted(.dateTime.month().day()))
                         .subtitleStyle()
-                        .foregroundColor(.white)
+                        .foregroundColor(.textPrimary)
                 }
             }
             
             // Bio
             if let bio = bio, !bio.isEmpty {
                 Text(bio)
-                    .foregroundColor(.white)
+                    .foregroundColor(.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.sm)
             }

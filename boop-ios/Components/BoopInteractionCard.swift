@@ -52,8 +52,7 @@ struct BoopInteractionCard: View {
             .frame(height: ComponentSize.cardHeight)
         }
         .buttonStyle(PlainButtonStyle())
-        .background(Color.backgroundSecondary)
-        .cornerRadius(CornerRadius.md)
+        .cardStyle()
     }
 
     // MARK: - Thumbnail Views
@@ -84,7 +83,7 @@ struct BoopInteractionCard: View {
     // Single circular thumbnail
     private var singleThumbnail: some View {
         Circle()
-            .fill(Color.gray.opacity(0.3))
+            .fill(Color.formBackgroundInactive)
             .overlay(
                 Circle()
                     .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -97,7 +96,7 @@ struct BoopInteractionCard: View {
         ZStack(alignment: .topLeading) {
             // Left thumbnail (back)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -107,7 +106,7 @@ struct BoopInteractionCard: View {
 
             // Right thumbnail (front)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -123,7 +122,7 @@ struct BoopInteractionCard: View {
         ZStack(alignment: .topLeading) {
             // Front thumbnail (leftmost)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -133,7 +132,7 @@ struct BoopInteractionCard: View {
 
             // Middle thumbnail
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
@@ -143,7 +142,7 @@ struct BoopInteractionCard: View {
 
             // Back thumbnail (rightmost)
             Circle()
-                .fill(Color.gray.opacity(0.3))
+                .fill(Color.formBackgroundInactive)
                 .overlay(
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
