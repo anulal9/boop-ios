@@ -6,65 +6,60 @@
 import SwiftUI
 import SwiftData
 
+/// Lightweight Hashable route used to push BoopHistoryView
+/// without relying on an isPresented binding that stays true
+/// while navigating deeper in the stack.
+struct BoopHistoryRoute: Hashable {
+    let contact: Contact
+}
+
 struct ContactDetailView: View {
     let contact: Contact
-    @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
-        NavigationView {
-            ZStack {
-                // Use contact's gradient colors as background
-                AnimatedMeshGradient(
-                    colors: contact.gradientColors,
-                    animationStyle: .horizontalWave,
-                    duration: 3.0
-                )
-                .ignoresSafeArea()
-                
-                Form {
-                    Section {
-                        ProfileDisplayCard(
-                            avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
-                            displayName: contact.displayName,
-                            birthday: contact.birthday,
-                            bio: contact.bio
-                        )
-                    }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                    
-                    // Interaction History Section
-                    Section {
-                        NavigationLink {
-                            BoopHistoryView(contact: contact)
-                        } label: {
-                            HStack {
-                                Image(systemName: "clock.arrow.circlepath")
-                                    .foregroundColor(.accentPrimary)
-                                Text("Boop History")
-                                    .foregroundColor(.textPrimary)
-                                Spacer()
-                                Text("\(contact.interactions.count)")
-                                    .subtitleStyle()
-                                    .foregroundColor(.textMuted)
-                            }
-                            .padding(.vertical, Spacing.sm)
+        ZStack {
+            // Use contact's gradient colors as background
+            AnimatedMeshGradient(
+                colors: contact.gradientColors,
+                animationStyle: .horizontalWave,
+                duration: 3.0
+            )
+            .ignoresSafeArea()
+
+            Form {
+                Section {
+                    ProfileDisplayCard(
+                        avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
+                        displayName: contact.displayName,
+                        birthday: contact.birthday,
+                        bio: contact.bio
+                    )
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+
+                // Interaction History Section
+                Section {
+                    NavigationLink(value: BoopHistoryRoute(contact: contact)) {
+                        HStack {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundColor(.accentPrimary)
+                            Text("Boop History")
+                                .foregroundColor(.textPrimary)
+                            Spacer()
+                            Text("\(contact.interactions.count)")
+                                .subtitleStyle()
+                                .foregroundColor(.textMuted)
                         }
+                        .padding(.vertical, Spacing.sm)
                     }
-                    .listRowBackground(Color.clear)
                 }
-                .scrollContentBackground(.hidden)
+                .listRowBackground(Color.clear)
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(.accentPrimary)
-                }
-            }
+            .scrollContentBackground(.hidden)
         }
+        .navigationTitle(contact.displayName)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -72,14 +67,12 @@ struct BoopHistoryView: View {
     let contact: Contact
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            List(contact.interactions.sorted(by: { $0.timestamp > $1.timestamp })) { interaction in
-                BoopInteractionCard(interaction: interaction)
-                    .listRowBackground(Color.clear)
-            }
-            .scrollContentBackground(.hidden)
+        ScrollView {
+            BoopInteractionTimelineBody(
+                interactions: contact.interactions.sorted(by: { $0.timestamp > $1.timestamp })
+            )
         }
-        .navigationTitle("Boop History")
+        .navigationTitle(contact.displayName)
         .navigationBarTitleDisplayMode(.inline)
         .pageBackground()
     }

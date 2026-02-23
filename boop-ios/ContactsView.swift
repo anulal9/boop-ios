@@ -11,7 +11,6 @@ import SwiftData
 struct ContactsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var contacts: [Contact]
-    @State private var selectedContact: Contact? = nil
     @State private var showBoopRanging = false
 
     var body: some View {
@@ -19,9 +18,7 @@ struct ContactsView: View {
             ScrollView {
                 LazyVStack {
                     ForEach(contacts) { contact in
-                        Button(action: {
-                            selectedContact = contact
-                        }) {
+                        NavigationLink(value: contact) {
                             buildContactCard(contact: contact)
                         }
                     }
@@ -45,8 +42,14 @@ struct ContactsView: View {
                     }
                 }
             }
-            .sheet(item: $selectedContact) { contact in
+            .navigationDestination(for: Contact.self) { contact in
                 ContactDetailView(contact: contact)
+            }
+            .navigationDestination(for: BoopHistoryRoute.self) { route in
+                BoopHistoryView(contact: route.contact)
+            }
+            .navigationDestination(for: BoopInteraction.self) { interaction in
+                BoopInteractionDetailView(interaction: interaction)
             }
             .sheet(isPresented: $showBoopRanging) {
                 BoopRangingView(isPresented: $showBoopRanging)

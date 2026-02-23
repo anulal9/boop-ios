@@ -20,55 +20,13 @@ struct BoopTimelineView: View {
 
     private let animationDuration: TimeInterval = 2
 
-    // Relative date formatter with controlled granularity
-    private let relativeDateFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .full
-        return formatter
-    }()
-
-    // Calculate header text for a given timestamp (relative to current time)
-    private func headerText(for date: Date) -> String {
-        let headerText = relativeDateFormatter.localizedString(for: date, relativeTo: Date())
-
-        // Sanitize and check for granular time units
-        let sanitized = headerText.trimmingCharacters(in: .whitespaces).lowercased()
-        let words = sanitized.components(separatedBy: .whitespaces)
-
-        // If it contains minutes or hours, group under "Today"
-        if words.contains(where: { $0.contains("minute") || $0.contains("hour") }) {
-            return "Today"
-        }
-
-        return headerText.capitalized
-    }
+    // Relative date formatter and headerText logic live in BoopInteractionTimelineBody
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: Spacing.md) {
-                        ForEach(Array(allInteractions.enumerated()), id: \.element.id) { index, interaction in
-                            // Show header if this is the first item or the header changed from previous
-                            let currentHeader = headerText(for: interaction.timestamp)
-                            let previousHeader = index > 0 ? headerText(for: allInteractions[index - 1].timestamp) : nil
-
-                            if previousHeader != currentHeader {
-                                Text(currentHeader)
-                                    .heading1Style()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, Spacing.lg)
-                                    .padding(.vertical, Spacing.md)
-                            }
-
-                            NavigationLink(value: interaction) {
-                                BoopInteractionCard(interaction: interaction)
-                            }
-                            .padding(.horizontal, Spacing.lg)
-                            .id(interaction.id) // Add ID for scrolling
-                        }
-                    }
-                    .scrollContentBackground(Visibility.hidden)
+                    BoopInteractionTimelineBody(interactions: allInteractions)
                 }
                 .onChange(of: selectedInteractionID) { _, newID in
                     if let id = newID {
@@ -110,26 +68,7 @@ struct BoopTimelineView: View {
                 AddManualBoopView()
             }
             .navigationDestination(for: BoopInteraction.self) { interaction in
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    Text("Boop Detail")
-                        .heading1Style()
-                    
-                    Text(interaction.title)
-                        .heading2Style()
-                    
-                    Text(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
-                        .subtitleStyle()
-                    
-                    if !interaction.location.isEmpty {
-                        Text("Location: \(interaction.location)")
-                            .subtitleStyle()
-                    }
-                    
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding()
-                .pageBackground()
+                BoopInteractionDetailView(interaction: interaction)
             }
             .overlay {
                 if showBoop {
