@@ -486,6 +486,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleURLTypes = "<array><dict><key>CFBundleTypeRole</key><string>Editor</string><key>CFBundleURLName</key><string>com.boop.boop-ios</string><key>CFBundleURLSchemes</key><array><string>boop</string></array></dict></array>";
+				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "This app uses Bluetooth to find and connect with nearby devices.";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "This app needs Bluetooth access to advertise its presence to nearby devices.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "This app uses location to add location tags to interactions with the user and their friends on the app";
 				INFOPLIST_KEY_NSNearbyInteractionUsageDescription = "This app uses Ultra Wideband to accurately detect when devices are close together for the boop feature.";

@@ -20,7 +20,7 @@ class BoopManager: NSObject, ObservableObject {
     private var peripheralToSenderUUID: [UUID: UUID] = [:]
 
     // MARK: - Private Properties
-    private let bluetoothManager: BluetoothManager
+    private var bluetoothManager: BluetoothManager?
     private var cancellables = Set<AnyCancellable>()
     private var updateTimer: Timer?
     private let updateInterval: TimeInterval = 2.0  // Update every 2 seconds
@@ -37,9 +37,18 @@ class BoopManager: NSObject, ObservableObject {
 
     // MARK: - Init
     override init() {
-        self.bluetoothManager = BluetoothManager()
         super.init()
-        self.bluetoothManager.setBoopDelegate(self)
+    }
+
+    private func getOrCreateBluetoothManager() -> BluetoothManager {
+        if let manager = bluetoothManager {
+            return manager
+        }
+
+        let manager = BluetoothManager()
+        manager.setBoopDelegate(self)
+        bluetoothManager = manager
+        return manager
     }
     
     // MARK: - Setup
@@ -47,7 +56,7 @@ class BoopManager: NSObject, ObservableObject {
     private var previousPositions: [UUID: DevicePositionCategory] = [:]
 
     private func setupObservers() {
-        bluetoothManager.nearbyDevices
+        getOrCreateBluetoothManager().nearbyDevices
             .sink { [weak self] devices in
                 guard let self = self else { return }
                 self.processNearbyDevicesUpdate(devices)
@@ -81,7 +90,7 @@ class BoopManager: NSObject, ObservableObject {
                 if let displayName = try? await self.displayName.value {
                     let profile = await DataStore.shared.getUserProfile()
                     print("👋 BoopManager: Sending presence to \(deviceID.uuidString.prefix(8)) with name '\(displayName)'")
-                    self.bluetoothManager.sendPresence(
+                    self.getOrCreateBluetoothManager().sendPresence(
                         to: deviceID,
                         displayName: displayName,
                         birthday: profile?.birthday,
@@ -118,24 +127,29 @@ class BoopManager: NSObject, ObservableObject {
     }
     
     func start() {
+        _ = getOrCreateBluetoothManager()
         setupObservers()
-        bluetoothManager.start()
+        bluetoothManager?.start()
     }
     
     func stop() {
         cancellables.removeAll()
-        bluetoothManager.stop()
+        bluetoothManager?.stop()
     }
 
     // MARK: - Public Methods
 
     /// Get nearby devices with their display info
     func getNearbyDevices() -> [UUID: DevicePositionCategory] {
-        return bluetoothManager.getNearbyDevices()
+        return bluetoothManager?.getNearbyDevices() ?? [:]
     }
 
     private func sendBluetoothMessage(deviceId: UUID,
                                       messageType: BluetoothMessage.MessageType) async -> Bool {
+        guard let bluetoothManager else {
+            print("⚠️ BoopManager: Bluetooth manager not initialized")
+            return false
+        }
         do {
             // Get user profile data
             let profile = await DataStore.shared.getUserProfile()

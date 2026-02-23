@@ -156,6 +156,11 @@ extension BluetoothManager: BluetoothServiceDelegate {
     
     func didReceiveUWBTokenUpdate(for deviceID: UUID, newToken: NIDiscoveryToken) {
         uwbManager.registerPeerDiscoveryToken(from: deviceID, token: newToken)
+
+        if !uwbManager.isRanging(to: deviceID) {
+            print("📍 BT Manager: Peer token received for \(deviceID.uuidString.prefix(8)); starting provisional ranging to trigger NI permission")
+            uwbManager.startRanging(to: deviceID)
+        }
     }
     
 

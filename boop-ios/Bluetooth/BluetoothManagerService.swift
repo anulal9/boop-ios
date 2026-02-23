@@ -192,15 +192,57 @@ class BluetoothManagerServiceImpl: NSObject, BluetoothManagerService {
 extension BluetoothManagerServiceImpl: CBPeripheralManagerDelegate, CBCentralManagerDelegate {
 
     func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
-        if peripheral.state == .poweredOn {
+        switch peripheral.state {
+        case .poweredOn:
             peripheralReady = true
+            print("✅ BLE Peripheral state: poweredOn")
+        case .poweredOff:
+            peripheralReady = false
+            print("⚠️ BLE Peripheral state: poweredOff")
+        case .unauthorized:
+            peripheralReady = false
+            print("❌ BLE Peripheral state: unauthorized")
+        case .unsupported:
+            peripheralReady = false
+            print("❌ BLE Peripheral state: unsupported")
+        case .resetting:
+            peripheralReady = false
+            print("⚠️ BLE Peripheral state: resetting")
+        case .unknown:
+            peripheralReady = false
+            print("⚠️ BLE Peripheral state: unknown")
+        @unknown default:
+            peripheralReady = false
+            print("⚠️ BLE Peripheral state: unrecognized")
         }
+        maybeStart()
     }
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        if central.state == .poweredOn {
+        switch central.state {
+        case .poweredOn:
             centralReady = true
+            print("✅ BLE Central state: poweredOn")
+        case .poweredOff:
+            centralReady = false
+            print("⚠️ BLE Central state: poweredOff")
+        case .unauthorized:
+            centralReady = false
+            print("❌ BLE Central state: unauthorized")
+        case .unsupported:
+            centralReady = false
+            print("❌ BLE Central state: unsupported")
+        case .resetting:
+            centralReady = false
+            print("⚠️ BLE Central state: resetting")
+        case .unknown:
+            centralReady = false
+            print("⚠️ BLE Central state: unknown")
+        @unknown default:
+            centralReady = false
+            print("⚠️ BLE Central state: unrecognized")
         }
+        maybeStart()
     }
 
     func centralManager(_ central: CBCentralManager,
