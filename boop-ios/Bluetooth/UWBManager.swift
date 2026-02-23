@@ -96,8 +96,10 @@ class UWBManager: NSObject, UWBManaging {
 
     // MARK: - Setup
     private func setupSession(to deviceID: UUID) {
-        guard NISession.isSupported else {
-            print("❌ UWB: NISession is NOT SUPPORTED on this device")
+        // Verify device supports UWB ranging via capability check
+        let caps = NISession.deviceCapabilities
+        guard caps.supportsPreciseDistanceMeasurement || caps.supportsDirectionMeasurement else {
+            print("❌ UWB: UWB ranging is NOT SUPPORTED on this device")
             return
         }
         
