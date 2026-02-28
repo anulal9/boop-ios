@@ -12,37 +12,23 @@ actor NotificationScheduler {
     /// Create or update an intent for a notification type + entity.
     /// If an intent already exists for this type+entity, updates it in place.
     func setSchedule(
-        type: BoopNotificationType,
-        trigger: BoopNotificationTrigger
+        type: NotificationType,
+        trigger: NotificationTrigger
     ) async {
-        let typeId = type.typeIdentifier
-        let entityId = type.entityUUID
-
-        let existing = fetchIntent(typeIdentifier: typeId, entityUUID: entityId)
+        let existing = fetchIntent(typeIdentifier: type.typeIdentifier, entityUUID: type.entityUUID)
 
         let intent: NotificationIntent
         if let existing {
-            existing.title = type.title
-            existing.body = type.body
-            existing.isActive = true
-            existing.updatedAt = Date()
-            trigger.apply(to: existing)
+            NotificationBuilder.updateIntent(existing, type: type, trigger: trigger)
             intent = existing
         } else {
-            intent = NotificationIntent(
-                typeIdentifier: typeId,
-                entityUUID: entityId,
-                title: type.title,
-                body: type.body,
-                triggerKind: ""  // will be set by apply
-            )
-            trigger.apply(to: intent)
+            intent = NotificationBuilder.buildIntent(type: type, trigger: trigger)
             modelContext.insert(intent)
         }
 
         try? modelContext.save()
 
-        let request = BoopNotificationBuilder.build(from: intent)
+        let request = NotificationBuilder.buildRequest(from: intent)
         await NotificationManager.shared.schedule(request)
     }
 
@@ -77,7 +63,7 @@ actor NotificationScheduler {
         try? modelContext.save()
 
         if active {
-            let request = BoopNotificationBuilder.build(from: existing)
+            let request = NotificationBuilder.buildRequest(from: existing)
             await NotificationManager.shared.schedule(request)
         } else {
             await NotificationManager.shared.cancel(identifier: existing.notificationIdentifier)
@@ -92,7 +78,7 @@ actor NotificationScheduler {
         guard let intents = try? modelContext.fetch(descriptor) else { return }
 
         for intent in intents {
-            let request = BoopNotificationBuilder.build(from: intent)
+            let request = NotificationBuilder.buildRequest(from: intent)
             await NotificationManager.shared.schedule(request)
         }
     }

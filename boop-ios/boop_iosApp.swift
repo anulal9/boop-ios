@@ -22,6 +22,7 @@ struct boop_iosApp: App {
                 Contact.self,
                 UserProfile.self,
                 BoopInteraction.self,
+                NotificationIntent.self,
             ])
         self.modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         let configurationUrl = self.modelConfiguration.url
@@ -80,6 +81,21 @@ struct boop_iosApp: App {
             }
             .task {
                 await setModelContainer()
+                let granted = await NotificationManager.shared.requestAuthorization()
+                if let container = sharedModelContainer {
+                    let scheduler = NotificationScheduler(modelContainer: container)
+                    await scheduler.syncAllSchedules()
+
+                    if granted {
+                        await scheduler.setSchedule(
+                            type: .weeklyPlanning,
+                            trigger: .cadence(
+                                on: DateComponents(hour: 18, minute: 0, weekday: 1),
+                                every: .weekly
+                            )
+                        )
+                    }
+                }
             }
         }
     }
