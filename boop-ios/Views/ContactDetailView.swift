@@ -31,7 +31,7 @@ struct ContactDetailView: View {
                     ProfileDisplayCard(
                         displayName: contact.displayName,
                         birthday: contact.birthday,
-                        bio: contact.bio
+                        bio: contact.bio,
                     )
                 }
                 .listRowBackground(Color.clear)
@@ -42,18 +42,19 @@ struct ContactDetailView: View {
                     NavigationLink(value: BoopHistoryRoute(contact: contact)) {
                         HStack {
                             Image(systemName: "clock.arrow.circlepath")
-                                .foregroundColor(.accentPrimary)
+                                .foregroundColor(.staticWhite)
                             Text("Boop History")
-                                .foregroundColor(.textPrimary)
+                                .foregroundColor(.staticWhite)
                             Spacer()
                             Text("\(contact.interactions.count)")
-                                .subtitleStyle()
-                                .foregroundColor(.textMuted)
+                                .font(.subtitle)
+                                .foregroundColor(.staticWhite)
                         }
                         .padding(.vertical, Spacing.sm)
                     }
                 }
                 .listRowBackground(Color.clear)
+                .tint(.staticWhite)
             }
             .scrollContentBackground(.hidden)
         }

@@ -14,8 +14,8 @@ struct ProfileDisplayCard: View {
         VStack(spacing: Spacing.lg) {
             // Display Name
             Text(displayName)
-                .heading1Style()
-                .foregroundColor(.textPrimary)
+                .font(.heading1)
+                .foregroundColor(.staticWhite)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
             
@@ -23,17 +23,17 @@ struct ProfileDisplayCard: View {
             if let birthday = birthday {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "birthday.cake")
-                        .foregroundColor(.accentPrimary)
+                        .foregroundColor(.staticWhite)
                     Text(birthday.formatted(.dateTime.month().day()))
-                        .subtitleStyle()
-                        .foregroundColor(.textPrimary)
+                        .font(.subtitle)
+                        .foregroundColor(.staticWhite)
                 }
             }
             
             // Bio
             if let bio = bio, !bio.isEmpty {
                 Text(bio)
-                    .foregroundColor(.textPrimary)
+                    .foregroundColor(.staticWhite)
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.sm)
             }
