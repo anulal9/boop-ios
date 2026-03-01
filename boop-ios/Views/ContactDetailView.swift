@@ -29,7 +29,6 @@ struct ContactDetailView: View {
             Form {
                 Section {
                     ProfileDisplayCard(
-                        avatarImage: contact.avatarData.flatMap { UIImage(data: $0) }.map { Image(uiImage: $0) },
                         displayName: contact.displayName,
                         birthday: contact.birthday,
                         bio: contact.bio
@@ -82,7 +81,6 @@ struct BoopHistoryView: View {
     let contact = Contact(
         uuid: UUID(),
         displayName: "Jane Doe",
-        avatarData: nil,
         birthday: Date(),
         bio: "Coffee enthusiast and part-time adventurer"
     )

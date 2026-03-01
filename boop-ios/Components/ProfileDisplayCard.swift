@@ -6,34 +6,18 @@
 import SwiftUI
 
 struct ProfileDisplayCard: View {
-    let avatarImage: Image?
     let displayName: String
     let birthday: Date?
     let bio: String?
     
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            // Avatar
-            if let avatarImage = avatarImage {
-                avatarImage
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 100, height: 100)
-                    .clipShape(Circle())
-                    .frame(maxWidth: .infinity)
-            } else {
-                Image(systemName: "person.circle.fill")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 100, height: 100)
-                    .foregroundColor(.textMuted)
-                    .frame(maxWidth: .infinity)
-            }
-            
             // Display Name
             Text(displayName)
                 .heading1Style()
                 .foregroundColor(.textPrimary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
             
             // Birthday
             if let birthday = birthday {
@@ -60,7 +44,6 @@ struct ProfileDisplayCard: View {
 
 #Preview {
     ProfileDisplayCard(
-        avatarImage: nil,
         displayName: "Jane Doe",
         birthday: Date(),
         bio: "Coffee enthusiast and part-time adventurer"

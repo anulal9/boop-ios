@@ -19,7 +19,7 @@ struct RootView: View {
                 if isProfileLoaded {
                     MainTabView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID)
                 } else {
-                    ProfileSetupView(onSave: { profile, _ in
+                    ProfileSetupView(onSave: { profile in
                         Task {
                             modelContext.insert(profile)
                             await DataStore.shared.setUserProfile(profile)

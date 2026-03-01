@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct ProfileSetupView: View {
     @Environment(\.modelContext) private var modelContext
@@ -8,9 +7,6 @@ struct ProfileSetupView: View {
     @State private var birthday: Date?
     @State private var bio: String
 
-    @State private var imageSelection: PhotosPickerItem?
-    @State private var avatarImage: AvatarImage?
-    
     @State private var isLoading = false
     @State private var gradientColors: [Color] = []
     @State private var selectedColors: [Color] = []
@@ -19,23 +15,21 @@ struct ProfileSetupView: View {
     let buttonText: String
     let requireAllFields: Bool
     let isEditMode: Bool
-    let onSave: (UserProfile, AvatarImage?) -> Void
+    let onSave: (UserProfile) -> Void
     
     init(
         initialName: String = "",
         initialBirthday: Date? = nil,
         initialBio: String = "",
-        initialAvatarImage: AvatarImage? = nil,
         buttonText: String = "Continue",
         requireAllFields: Bool = true,
         isEditMode: Bool = false,
         gradientColors: [Color]? = nil,
-        onSave: @escaping (UserProfile, AvatarImage?) -> Void
+        onSave: @escaping (UserProfile) -> Void
     ) {
         _name = State(initialValue: initialName)
         _birthday = State(initialValue: initialBirthday)
         _bio = State(initialValue: initialBio)
-        _avatarImage = State(initialValue: initialAvatarImage)
         let colors = gradientColors ?? ProfileSetupView.generateRandomGradient()
         _gradientColors = State(initialValue: colors)
         // Extract the two unique colors from the gradient pattern
@@ -77,16 +71,6 @@ struct ProfileSetupView: View {
                 
                 Form {
                 Section {
-                    ProfilePhotoSelector(
-                        imageSelection: $imageSelection,
-                        avatarImage: avatarImage
-                    )
-                    .frame(maxWidth: .infinity)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                }
-
-                Section {
                     StyledTextField(placeholder: "Name", text: $name)
                         .listRowSeparator(.hidden)
                     DatePickerField(
@@ -123,20 +107,6 @@ struct ProfileSetupView: View {
                 }
                 .disabled(!canSubmit || isLoading)
             }
-            .onChange(of: imageSelection) { _, newValue in
-                guard let newValue else { return }
-                loadTransferable(from: newValue)
-            }
-            }
-        }
-    }
-
-    private func loadTransferable(from imageSelection: PhotosPickerItem) {
-        Task {
-            do {
-                avatarImage = try await imageSelection.loadTransferable(type: AvatarImage.self)
-            } catch {
-                print("⚠️ Failed to load image: \(error.localizedDescription)")
             }
         }
     }
@@ -146,13 +116,12 @@ struct ProfileSetupView: View {
         
         let profile = UserProfile(
             name: name.sanitize(),
-            avatarData: avatarImage?.data,
             birthday: birthday,
             bio: bio.isEmpty ? nil : bio.sanitize(),
             gradientColors: gradientColors
         )
         
-        onSave(profile, avatarImage)
+        onSave(profile)
         
         isLoading = false
     }
@@ -256,6 +225,6 @@ private struct ColorPickerSheet: View {
 }
 
 #Preview {
-    ProfileSetupView(onSave: { _, _ in })
+    ProfileSetupView(onSave: { _ in })
         .modelContainer(for: UserProfile.self, inMemory: true)
 }

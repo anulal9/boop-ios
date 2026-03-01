@@ -14,7 +14,6 @@ import SwiftUI
 final class Contact {
     var uuid: UUID
     var displayName: String
-    var avatarData: Data?
     var birthday: Date?
     var bio: String?
     var gradientColorsData: [String] = []
@@ -23,10 +22,9 @@ final class Contact {
     @Relationship(deleteRule: .cascade, inverse: \BoopInteraction.contact)
     var interactions: [BoopInteraction]
 
-    init(uuid: UUID, displayName: String, avatarData: Data? = nil, birthday: Date? = nil, bio: String? = nil, gradientColors: [Color] = [], interactions: [BoopInteraction] = []) {
+    init(uuid: UUID, displayName: String, birthday: Date? = nil, bio: String? = nil, gradientColors: [Color] = [], interactions: [BoopInteraction] = []) {
         self.uuid = uuid
         self.displayName = displayName
-        self.avatarData = avatarData
         self.birthday = birthday
         self.bio = bio
         self.gradientColorsData = gradientColors.map { Self.colorToString($0) }

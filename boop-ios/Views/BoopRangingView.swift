@@ -102,7 +102,6 @@ struct BoopRangingView: View {
             contact = Contact(
                 uuid: contactUUID,
                 displayName: boop.displayName,
-                avatarData: nil,
                 birthday: boop.birthday,
                 bio: boop.bio,
                 gradientColors: boop.gradientColors

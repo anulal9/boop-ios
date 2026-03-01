@@ -1,5 +1,4 @@
 import SwiftUI
-import PhotosUI
 
 struct ProfileView: View {
     @Environment(\.modelContext) private var modelContext
@@ -11,8 +10,6 @@ struct ProfileView: View {
     @State private var isEditing = false
     @State private var isEditingDisplay = false
 
-    @State private var imageSelection: PhotosPickerItem?
-    @State private var avatarImage: AvatarImage?
     @State private var gradientColors: [Color] = []
     @State private var showColorPicker = false
 
@@ -61,10 +58,6 @@ struct ProfileView: View {
                     }
                 }
             }
-            .onChange(of: imageSelection) { _, newValue in
-                guard let newValue else { return }
-                loadTransferable(from: newValue)
-            }
             .task {
                 await loadProfile()
             }
@@ -85,14 +78,13 @@ struct ProfileView: View {
                 Form {
                     Section {
                         ProfileDisplayCard(
-                            avatarImage: avatarImage?.image,
                             displayName: name,
                             birthday: birthday,
                             bio: bio.isEmpty ? nil : bio
                         )
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
                 }
                 .scrollContentBackground(.hidden)
             }
@@ -104,13 +96,12 @@ struct ProfileView: View {
             initialName: name,
             initialBirthday: birthday,
             initialBio: bio,
-            initialAvatarImage: avatarImage,
             buttonText: "Save",
             requireAllFields: false,
             isEditMode: true,
             gradientColors: gradientColors,
-            onSave: { profile, avatar in
-                saveProfile(profile: profile, avatar: avatar)
+            onSave: { profile in
+                saveProfile(profile: profile)
             }
         )
     }
@@ -129,7 +120,7 @@ struct ProfileView: View {
                     Form {
                         Section {
                             ProfileDisplayCard(
-                                avatarImage: avatarImage?.image,
+
                                 displayName: name,
                                 birthday: birthday,
                                 bio: bio.isEmpty ? nil : bio
@@ -176,10 +167,9 @@ struct ProfileView: View {
     
     private func saveDisplayChanges() {
         Task {
-            if var profileData = await DataStore.shared.getUserProfile() {
+            if let profileData = await DataStore.shared.getUserProfile() {
                 let profile = UserProfile(
                     name: profileData.name,
-                    avatarData: profileData.avatarData,
                     birthday: profileData.birthday,
                     bio: profileData.bio,
                     gradientColors: gradientColors
@@ -203,17 +193,7 @@ struct ProfileView: View {
         }
     }
 
-    private func loadTransferable(from imageSelection: PhotosPickerItem) {
-        Task {
-            do {
-                avatarImage = try await imageSelection.loadTransferable(type: AvatarImage.self)
-            } catch {
-                print("⚠️ Failed to load image: \(error.localizedDescription)")
-            }
-        }
-    }
-
-    private func saveProfile(profile: UserProfile, avatar: AvatarImage?) {
+    private func saveProfile(profile: UserProfile) {
         isLoading = true
 
         Task {
@@ -225,7 +205,6 @@ struct ProfileView: View {
                 self.name = profile.name
                 self.birthday = profile.birthday
                 self.bio = profile.bio ?? ""
-                self.avatarImage = avatar
                 self.gradientColors = profile.gradientColors
                 
                 self.isLoading = false
@@ -239,14 +218,6 @@ struct ProfileView: View {
 
         if let profileData = await DataStore.shared.getUserProfile() {
             print("✅ [Profile] Local profile loaded")
-
-            if let avatarData = profileData.avatarData,
-               let uiImage = UIImage(data: avatarData) {
-                let image = Image(uiImage: uiImage)
-                await MainActor.run {
-                    self.avatarImage = AvatarImage(image: image, data: avatarData)
-                }
-            }
 
             await MainActor.run {
                 self.name = profileData.name

@@ -27,10 +27,6 @@ actor DataStore {
             cache[UserDefaultsKeys.name] = name
         }
 
-        if let avatarData = UserDefaults.standard.data(forKey: UserDefaultsKeys.avatarData) {
-            cache[UserDefaultsKeys.avatarData] = avatarData
-        }
-
         if let birthday = UserDefaults.standard.object(forKey: UserDefaultsKeys.birthday) as? Date {
             cache[UserDefaultsKeys.birthday] = birthday
         }
@@ -56,14 +52,6 @@ actor DataStore {
             return cached
         }
         return UserDefaults.standard.string(forKey: UserDefaultsKeys.name)
-    }
-
-    /// Returns the user's avatar data if available
-    func getAvatarData() async -> Data? {
-        if let cached = cache[UserDefaultsKeys.avatarData] as? Data {
-            return cached
-        }
-        return UserDefaults.standard.data(forKey: UserDefaultsKeys.avatarData)
     }
 
     /// Returns the user's birthday if available
@@ -110,13 +98,11 @@ actor DataStore {
             return nil
         }
 
-        let avatarData = await getAvatarData()
         let birthday = await getBirthday()
         let bio = await getBio()
         let gradientColors = await getGradientColors() ?? []
         let userProfileData = UserProfileData(
             name: name,
-            avatarData: avatarData,
             birthday: birthday,
             bio: bio,
             gradientColorsData: gradientColors
@@ -130,9 +116,6 @@ actor DataStore {
     func setUserProfile(_ profile: UserProfile) async {
         // Update UserDefaults
         UserDefaults.standard.set(profile.name, forKey: UserDefaultsKeys.name)
-        if let avatarData = profile.avatarData {
-            UserDefaults.standard.set(avatarData, forKey: UserDefaultsKeys.avatarData)
-        }
         if let birthday = profile.birthday {
             UserDefaults.standard.set(birthday, forKey: UserDefaultsKeys.birthday)
         }
@@ -143,9 +126,6 @@ actor DataStore {
 
         // Update cache
         cache[UserDefaultsKeys.name] = profile.name
-        if let avatarData = profile.avatarData {
-            cache[UserDefaultsKeys.avatarData] = avatarData
-        }
         if let birthday = profile.birthday {
             cache[UserDefaultsKeys.birthday] = birthday
         }
@@ -163,17 +143,6 @@ actor DataStore {
         cache[UserDefaultsKeys.profileComplete] = isComplete
     }
 
-    /// Sets the avatar data
-    func setAvatarData(_ data: Data?) async {
-        if let data = data {
-            UserDefaults.standard.set(data, forKey: UserDefaultsKeys.avatarData)
-            cache[UserDefaultsKeys.avatarData] = data
-        } else {
-            UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.avatarData)
-            cache.removeValue(forKey: UserDefaultsKeys.avatarData)
-        }
-    }
-
     // MARK: - Cache Management
 
     /// Clears all user data from both cache and UserDefaults
@@ -184,7 +153,6 @@ actor DataStore {
 
         // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.name)
-        UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.avatarData)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.birthday)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.bio)
         UserDefaults.standard.removeObject(forKey: UserDefaultsKeys.profileComplete)
@@ -199,7 +167,6 @@ actor DataStore {
 /// Use this when you need to read multiple profile fields at once
 struct UserProfileData {
     let name: String
-    let avatarData: Data?
     let birthday: Date?
     let bio: String?
     let gradientColorsData: [String]
