@@ -90,7 +90,7 @@ struct boop_iosApp: App {
                         await scheduler.setSchedule(
                             type: .weeklyPlanning,
                             trigger: .cadence(
-                                on: DateComponents(hour: 20, minute: 22, weekday: 7),
+                                on: DateComponents(hour: 17, minute: 0, weekday: 1),
                                 every: .weekly
                             )
                         )
