@@ -151,14 +151,14 @@ private struct DatePickerSheet: View {
                 Button("Clear") {
                     onClear()
                 }
-                .foregroundColor(.black)
+                .foregroundColor(Color.textPrimary)
                 .font(.system(size: 17))
 
                 Spacer()
 
                 Text(title)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(Color.textPrimary)
 
                 Spacer()
 
@@ -179,7 +179,6 @@ private struct DatePickerSheet: View {
             )
             .datePickerStyle(.wheel)
             .labelsHidden()
-            .colorScheme(.light)
             .onChange(of: tempDate) { _, newDate in
                 let components = Calendar.current.dateComponents([.month, .day, .year], from: newDate)
                 selectedMonth = (components.month ?? 1) - 1
@@ -193,11 +192,11 @@ private struct DatePickerSheet: View {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 14))
-                    .foregroundColor(.black)
+                    .foregroundColor(Color.textPrimary)
 
                 Text(info)
                     .font(.system(size: 14))
-                    .foregroundColor(.black)
+                    .foregroundColor(Color.textPrimary)
             }
             .padding(.bottom, Spacing.xl)
         }
