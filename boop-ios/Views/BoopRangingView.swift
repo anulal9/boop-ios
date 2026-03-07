@@ -132,8 +132,7 @@ struct BoopRangingView: View {
         LiveActivityManager.shared.startBoopLiveActivity(
             contactName: boop.displayName,
             contactID: contactUUID,
-            interactionID: newInteraction.id,
-            gradientColors: boop.gradientColors.map { Contact.colorToString($0) }
+            interactionID: newInteraction.id
         )
 
         // Show modal

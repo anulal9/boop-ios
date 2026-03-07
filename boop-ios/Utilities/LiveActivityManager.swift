@@ -17,8 +17,7 @@ class LiveActivityManager {
     func startBoopLiveActivity(
         contactName: String,
         contactID: UUID,
-        interactionID: UUID? = nil,
-        gradientColors: [String] = ["#ff7aa2", "#3a1e3f"]
+        interactionID: UUID? = nil
     ) {
         if #available(iOS 16.1, *) {
             let authInfo = ActivityAuthorizationInfo()
@@ -44,8 +43,7 @@ class LiveActivityManager {
                 contactName: contactName,
                 contactID: contactID,
                 interactionID: interactionID,
-                boopTime: Date(),
-                gradientColors: gradientColors
+                boopTime: Date()
             )
 
             do {
@@ -71,8 +69,7 @@ class LiveActivityManager {
     func updateBoopLiveActivity(
         contactName: String,
         contactID: UUID,
-        interactionID: UUID?,
-        gradientColors: [String] = ["#ff7aa2", "#3a1e3f"]
+        interactionID: UUID?
     ) async {
         if #available(iOS 16.1, *) {
             guard let activity = currentActivity else {
@@ -84,8 +81,7 @@ class LiveActivityManager {
                 contactName: contactName,
                 contactID: contactID,
                 interactionID: interactionID,
-                boopTime: Date(),
-                gradientColors: gradientColors
+                boopTime: Date()
             )
             
             let content = ActivityContent(state: updatedState, staleDate: Date().addingTimeInterval(300))

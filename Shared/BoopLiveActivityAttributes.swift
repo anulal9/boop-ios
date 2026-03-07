@@ -16,20 +16,17 @@ public struct BoopLiveActivityAttributes: ActivityAttributes {
         public var contactID: UUID
         public var interactionID: UUID?
         public var boopTime: Date
-        public var gradientColors: [String]
         
         public init(
             contactName: String,
             contactID: UUID,
             interactionID: UUID? = nil,
-            boopTime: Date,
-            gradientColors: [String] = ["#ff7aa2", "#3a1e3f"]
+            boopTime: Date
         ) {
             self.contactName = contactName
             self.contactID = contactID
             self.interactionID = interactionID
             self.boopTime = boopTime
-            self.gradientColors = gradientColors
         }
     }
     
