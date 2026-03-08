@@ -3,7 +3,7 @@ import SwiftUI
 struct DatePickerField: View {
     let title: String
     let placeholder: String
-    let info: String
+    let info: String?
     @Binding var selectedDate: Date?
 
     @State private var showingPicker = false
@@ -15,7 +15,7 @@ struct DatePickerField: View {
     private let days = Array(1...31)
     private let years: [Int]
 
-    init(title: String, placeholder: String, info: String, selectedDate: Binding<Date?>) {
+    init(title: String, placeholder: String, info: String? = nil, selectedDate: Binding<Date?>) {
         self.title = title
         self.placeholder = placeholder
         self.info = info
@@ -103,7 +103,7 @@ struct DatePickerField: View {
 
 private struct DatePickerSheet: View {
     let title: String
-    let info: String
+    let info: String?
     let months: [String]
     let days: [Int]
     let years: [Int]
@@ -119,7 +119,7 @@ private struct DatePickerSheet: View {
 
     @State private var tempDate: Date
 
-    init(title: String, info: String, months: [String], days: [Int], years: [Int],
+    init(title: String, info: String?, months: [String], days: [Int], years: [Int],
          selectedMonth: Binding<Int>, selectedDay: Binding<Int>, selectedYear: Binding<Int>,
          onClear: @escaping () -> Void, onDismiss: @escaping () -> Void) {
         self.title = title
@@ -189,16 +189,20 @@ private struct DatePickerSheet: View {
                 onDismiss()
             }
             // Info text
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.textPrimary)
+            if let info {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.textPrimary)
 
-                Text(info)
-                    .font(.system(size: 14))
-                    .foregroundColor(Color.textPrimary)
+                    Text(info)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color.textPrimary)
+                }
+                .padding(.bottom, Spacing.xl)
+            } else {
+                Spacer().frame(height: Spacing.xl)
             }
-            .padding(.bottom, Spacing.xl)
         }
         .background(.ultraThinMaterial)
     }

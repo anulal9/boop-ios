@@ -15,7 +15,7 @@ struct AddManualBoopView: View {
 
     @State private var selectedContact: Contact?
     @State private var newContactName: String = ""
-    @State private var selectedDate: Date = Date()
+    @State private var selectedDate: Date? = nil
 
     private var isUsingNewName: Bool {
         selectedContact == nil && !newContactName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -87,23 +87,12 @@ struct AddManualBoopView: View {
                     }
 
                     // MARK: - Date Picker
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Date & Time")
-                            .subtitleStyle()
-                            .padding(.horizontal, Spacing.lg)
-
-                        DatePicker(
-                            "Date",
-                            selection: $selectedDate,
-                            in: ...Date(),
-                            displayedComponents: [.date, .hourAndMinute]
-                        )
-                        .datePickerStyle(.graphical)
-                        .tint(.accentPrimary)
-                        .padding(Spacing.md)
-                        .cardStyle()
-                        .padding(.horizontal, Spacing.lg)
-                    }
+                    DatePickerField(
+                        title: "Set Date",
+                        placeholder: "When did this boop happen?",
+                        selectedDate: $selectedDate
+                    )
+                    .padding(.horizontal, Spacing.lg)
 
                     // MARK: - Add Button
                     Button(action: saveBoop) {
@@ -147,7 +136,7 @@ struct AddManualBoopView: View {
         let interaction = BoopInteraction(
             title: contact.displayName,
             location: "",
-            timestamp: selectedDate,
+            timestamp: selectedDate ?? Date(),
             contact: contact
         )
         modelContext.insert(interaction)
