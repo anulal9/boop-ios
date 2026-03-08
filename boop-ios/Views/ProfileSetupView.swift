@@ -10,7 +10,6 @@ struct ProfileSetupView: View {
     @State private var isLoading = false
     @State private var gradientColors: [Color] = []
     @State private var selectedColors: [Color] = []
-    @State private var showColorPicker = false
 
     let buttonText: String
     let requireAllFields: Bool
@@ -89,12 +88,6 @@ struct ProfileSetupView: View {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .sheet(isPresented: $showColorPicker) {
-                ColorPickerSheet(selectedColors: $selectedColors, onApply: {
-                    updateGradient()
-                    showColorPicker = false
-                })
-            }
             .toolbar {
                 Button {
                     saveProfile()
@@ -107,9 +100,9 @@ struct ProfileSetupView: View {
                 }
                 .disabled(!canSubmit || isLoading)
             }
-            }
         }
     }
+}
 
     private func saveProfile() {
         isLoading = true
@@ -129,98 +122,6 @@ struct ProfileSetupView: View {
     private func updateGradient() {
         guard selectedColors.count == 2 else { return }
         gradientColors = (0..<9).map { selectedColors[$0 % 2] }
-    }
-}
-
-// MARK: - Color Picker Sheet
-
-private struct ColorPickerSheet: View {
-    @Binding var selectedColors: [Color]
-    let onApply: () -> Void
-    
-    @Environment(\.dismiss) private var dismiss
-    
-    private let availableColors: [Color] = [
-        .red, .orange, .yellow, .green, .cyan, .blue, .indigo, .purple, .pink,
-        .mint, .teal, .brown, .white, .black, .gray
-    ]
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: Spacing.xl) {
-                Text("Select 2 Colors")
-                    .font(.headline)
-                    .padding(.top)
-                
-                Text("Choose two colors for your gradient")
-                    .font(.subheadline)
-                    .foregroundColor(.textMuted)
-                
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: Spacing.lg) {
-                    ForEach(availableColors, id: \.self) { color in
-                        Button(action: {
-                            toggleColorSelection(color)
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(color)
-                                    .frame(width: 60, height: 60)
-                                
-                                if selectedColors.contains(color) {
-                                    Circle()
-                                        .stroke(Color.white, lineWidth: 4)
-                                        .frame(width: 60, height: 60)
-                                    
-                                    if let index = selectedColors.firstIndex(of: color) {
-                                        Text("\(index + 1)")
-                                            .font(.heading2)
-                                            .foregroundColor(.textPrimary)
-                                            .shadow(radius: 2)
-                                    }
-                                }
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding()
-                
-                Spacer()
-                
-                Button(action: {
-                    onApply()
-                }) {
-                    Text("Apply")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(selectedColors.count == 2 ? Color.accentPrimary : Color.formBackgroundInactive)
-                        .foregroundColor(.textPrimary)
-                        .cornerRadius(CornerRadius.lg)
-                }
-                .disabled(selectedColors.count != 2)
-                .padding()
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func toggleColorSelection(_ color: Color) {
-        if let index = selectedColors.firstIndex(of: color) {
-            selectedColors.remove(at: index)
-        } else if selectedColors.count < 2 {
-            selectedColors.append(color)
-        } else {
-            // Replace the first color if already have 2 selected
-            selectedColors[0] = selectedColors[1]
-            selectedColors[1] = color
-        }
     }
 }
 
