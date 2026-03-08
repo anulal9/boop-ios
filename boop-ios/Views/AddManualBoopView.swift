@@ -86,10 +86,11 @@ struct AddManualBoopView: View {
                         }
                     }
 
-                    // MARK: - Date Picker
+                    // MARK: - Date & Time Picker
                     DatePickerField(
-                        title: "Set Date",
+                        title: "Date & Time",
                         placeholder: "When did this boop happen?",
+                        showTimePicker: true,
                         selectedDate: $selectedDate
                     )
                     .padding(.horizontal, Spacing.lg)

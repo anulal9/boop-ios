@@ -4,6 +4,7 @@ struct DatePickerField: View {
     let title: String
     let placeholder: String
     let info: String?
+    let showTimePicker: Bool
     @Binding var selectedDate: Date?
 
     @State private var showingPicker = false
@@ -15,10 +16,11 @@ struct DatePickerField: View {
     private let days = Array(1...31)
     private let years: [Int]
 
-    init(title: String, placeholder: String, info: String? = nil, selectedDate: Binding<Date?>) {
+    init(title: String, placeholder: String, info: String? = nil, showTimePicker: Bool = false, selectedDate: Binding<Date?>) {
         self.title = title
         self.placeholder = placeholder
         self.info = info
+        self.showTimePicker = showTimePicker
         self._selectedDate = selectedDate
 
         // Generate years from 1900 to current year
@@ -59,6 +61,7 @@ struct DatePickerField: View {
             DatePickerSheet(
                 title: title,
                 info: info,
+                showTimePicker: showTimePicker,
                 months: months,
                 days: days,
                 years: years,
@@ -66,7 +69,7 @@ struct DatePickerField: View {
                 selectedDay: $tempDay,
                 selectedYear: $tempYear,
                 onClear: clearDate,
-                onDismiss: saveDate
+                onSave: saveDate
             )
             .presentationDetents([.height(305)])
             .presentationDragIndicator(.visible)
@@ -74,11 +77,10 @@ struct DatePickerField: View {
     }
 
     private var displayText: String {
-        guard let date = selectedDate else {
-            return placeholder
-        }
+        guard let date = selectedDate else { return placeholder }
         let formatter = DateFormatter()
         formatter.dateStyle = .long
+        formatter.timeStyle = showTimePicker ? .short : .none
         return formatter.string(from: date)
     }
 
@@ -87,15 +89,9 @@ struct DatePickerField: View {
         showingPicker = false
     }
 
-    private func saveDate() {
-        var components = DateComponents()
-        components.month = tempMonth + 1
-        components.day = tempDay + 1
-        components.year = years[tempYear]
-
-        if let date = Calendar.current.date(from: components) {
-            selectedDate = date
-        }
+    private func saveDate(_ pickedDate: Date) {
+        selectedDate = pickedDate
+        showingPicker = false
     }
 }
 
@@ -104,6 +100,7 @@ struct DatePickerField: View {
 private struct DatePickerSheet: View {
     let title: String
     let info: String?
+    let showTimePicker: Bool
     let months: [String]
     let days: [Int]
     let years: [Int]
@@ -113,17 +110,19 @@ private struct DatePickerSheet: View {
     @Binding var selectedYear: Int
 
     let onClear: () -> Void
-    let onDismiss: () -> Void
-
-    @Environment(\.dismiss) private var dismiss
+    let onSave: (Date) -> Void
 
     @State private var tempDate: Date
+    @State private var tempTime: Date
+    @State private var showingTime: Bool = false
 
-    init(title: String, info: String?, months: [String], days: [Int], years: [Int],
+    init(title: String, info: String?, showTimePicker: Bool,
+         months: [String], days: [Int], years: [Int],
          selectedMonth: Binding<Int>, selectedDay: Binding<Int>, selectedYear: Binding<Int>,
-         onClear: @escaping () -> Void, onDismiss: @escaping () -> Void) {
+         onClear: @escaping () -> Void, onSave: @escaping (Date) -> Void) {
         self.title = title
         self.info = info
+        self.showTimePicker = showTimePicker
         self.months = months
         self.days = days
         self.years = years
@@ -131,62 +130,92 @@ private struct DatePickerSheet: View {
         self._selectedDay = selectedDay
         self._selectedYear = selectedYear
         self.onClear = onClear
-        self.onDismiss = onDismiss
+        self.onSave = onSave
 
-        // Initialize tempDate from current selections
+        let now = Date()
         var components = DateComponents()
         components.month = selectedMonth.wrappedValue + 1
         components.day = selectedDay.wrappedValue + 1
         components.year = years[selectedYear.wrappedValue]
-        let date = Calendar.current.date(from: components) ?? Date()
-        _tempDate = State(initialValue: date)
+        _tempDate = State(initialValue: Calendar.current.date(from: components) ?? now)
+        _tempTime = State(initialValue: now)
+    }
+
+    private func combinedDate() -> Date {
+        let dateParts = Calendar.current.dateComponents([.year, .month, .day], from: tempDate)
+        let timeParts = Calendar.current.dateComponents([.hour, .minute], from: tempTime)
+        var combined = DateComponents()
+        combined.year = dateParts.year
+        combined.month = dateParts.month
+        combined.day = dateParts.day
+        combined.hour = timeParts.hour
+        combined.minute = timeParts.minute
+        return Calendar.current.date(from: combined) ?? tempDate
     }
 
     var body: some View {
-        VStack() {
+        VStack {
             Spacer()
 
-            // Header with Clear button and title
+            // Header
             HStack {
-                Button("Clear") {
-                    onClear()
+                if showTimePicker && showingTime {
+                    Button("Back") {
+                        withAnimation { showingTime = false }
+                    }
+                    .foregroundColor(Color.textPrimary)
+                    .font(.system(size: 17))
+                } else {
+                    Button("Clear") {
+                        onClear()
+                    }
+                    .foregroundColor(Color.textPrimary)
+                    .font(.system(size: 17))
                 }
-                .foregroundColor(Color.textPrimary)
-                .font(.system(size: 17))
 
                 Spacer()
 
-                Text(title)
+                Text(showTimePicker && showingTime ? "Time" : title)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(Color.textPrimary)
 
                 Spacer()
 
-                // Invisible button for symmetry
-                Button("Clear") {
-                    onClear()
+                if showTimePicker && !showingTime {
+                    Button("Next") {
+                        withAnimation { showingTime = true }
+                    }
+                    .foregroundColor(Color.accentPrimary)
+                    .font(.system(size: 17, weight: .semibold))
+                } else {
+                    Button("Done") {
+                        onSave(combinedDate())
+                    }
+                    .foregroundColor(Color.accentPrimary)
+                    .font(.system(size: 17, weight: .semibold))
                 }
-                .opacity(0)
             }
             .padding(.horizontal, Spacing.xl)
             .padding(.top, Spacing.xl)
 
-            // Native iOS Date Picker with wheel style
-            DatePicker(
-                "",
-                selection: $tempDate,
-                displayedComponents: [.date]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .onChange(of: tempDate) { _, newDate in
-                let components = Calendar.current.dateComponents([.month, .day, .year], from: newDate)
-                selectedMonth = (components.month ?? 1) - 1
-                selectedDay = (components.day ?? 1) - 1
-                if let year = components.year, let yearIndex = years.firstIndex(of: year) {
-                    selectedYear = yearIndex
-                }
-                onDismiss()
+            if showTimePicker && showingTime {
+                // Step 2: Time wheel
+                DatePicker("", selection: $tempTime, displayedComponents: [.hourAndMinute])
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+            } else {
+                // Step 1: Date wheel
+                DatePicker("", selection: $tempDate, displayedComponents: [.date])
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .onChange(of: tempDate) { _, newDate in
+                        let components = Calendar.current.dateComponents([.month, .day, .year], from: newDate)
+                        selectedMonth = (components.month ?? 1) - 1
+                        selectedDay = (components.day ?? 1) - 1
+                        if let year = components.year, let yearIndex = years.firstIndex(of: year) {
+                            selectedYear = yearIndex
+                        }
+                    }
             }
             // Info text
             if let info {
@@ -220,9 +249,9 @@ private struct DatePickerSheet: View {
         )
 
         DatePickerField(
-            title: "Set event date",
-            placeholder: "Select date",
-            info: "Choose any date",
+            title: "Date & Time",
+            placeholder: "When did this happen?",
+            showTimePicker: true,
             selectedDate: .constant(Date())
         )
     }
