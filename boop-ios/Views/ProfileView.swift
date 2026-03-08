@@ -8,10 +8,8 @@ struct ProfileView: View {
     @State private var bio = ""
     @State private var isLoading = false
     @State private var isEditing = false
-    @State private var isEditingDisplay = false
 
     @State private var gradientColors: [Color] = []
-    @State private var showColorPicker = false
 
     var body: some View {
         NavigationView {
@@ -25,8 +23,6 @@ struct ProfileView: View {
                 } else {
                     if isEditing {
                         editModeView
-                    } else if isEditingDisplay {
-                        editDisplayModeView
                     } else {
                         displayModeView
                     }
@@ -34,26 +30,10 @@ struct ProfileView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if !isEditing && !isEditingDisplay && !isLoading {
+                if !isEditing && !isLoading {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Edit") {
                             isEditing = true
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Customize") {
-                            isEditingDisplay = true
-                        }
-                    }
-                } else if isEditingDisplay {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Done") {
-                            saveDisplayChanges()
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            cancelDisplayChanges()
                         }
                     }
                 }
@@ -106,93 +86,6 @@ struct ProfileView: View {
         )
     }
     
-    private var editDisplayModeView: some View {
-        NavigationView {
-            ZStack {
-                AnimatedMeshGradient(
-                    colors: gradientColors,
-                    animationStyle: .horizontalWave,
-                    duration: 3.0
-                )
-                .ignoresSafeArea()
-                
-                VStack {
-                    Form {
-                        Section {
-                            ProfileDisplayCard(
-
-                                displayName: name,
-                                birthday: birthday,
-                                bio: bio.isEmpty ? nil : bio
-                            )
-                        }
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
-                    }
-                    .scrollContentBackground(.hidden)
-                    
-                    // Display customization controls
-                    VStack(spacing: Spacing.lg) {
-                        Button(action: {
-                            showColorPicker = true
-                        }) {
-                            HStack {
-                                Text("Gradient Colors")
-                                    .foregroundColor(.textPrimary)
-                                    .font(.headline)
-                                Spacer()
-                                HStack(spacing: Spacing.xs) {
-                                    ForEach(Array(Set(gradientColors)).prefix(2), id: \.self) { color in
-                                        Circle()
-                                            .fill(color)
-                                            .frame(width: 32, height: 32)
-                                    }
-                                }
-                            }
-                            .padding()
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(CornerRadius.lg)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.horizontal)
-                    }
-                    .padding(.bottom)
-                }
-            }
-            .sheet(isPresented: $showColorPicker) {
-                DisplayColorPickerSheet(gradientColors: $gradientColors)
-            }
-        }
-    }
-    
-    private func saveDisplayChanges() {
-        Task {
-            if let profileData = await DataStore.shared.getUserProfile() {
-                let profile = UserProfile(
-                    name: profileData.name,
-                    birthday: profileData.birthday,
-                    bio: profileData.bio,
-                    gradientColors: gradientColors
-                )
-                await DataStore.shared.setUserProfile(profile)
-                modelContext.insert(profile)
-            }
-            await MainActor.run {
-                isEditingDisplay = false
-            }
-        }
-    }
-    
-    private func cancelDisplayChanges() {
-        // Reload original gradient colors
-        Task {
-            await loadProfile()
-            await MainActor.run {
-                isEditingDisplay = false
-            }
-        }
-    }
-
     private func saveProfile(profile: UserProfile) {
         isLoading = true
 

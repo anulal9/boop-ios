@@ -9,7 +9,7 @@ struct ProfileSetupView: View {
 
     @State private var isLoading = false
     @State private var gradientColors: [Color] = []
-    @State private var selectedColors: [Color] = []
+    @State private var showColorPicker = false
 
     let buttonText: String
     let requireAllFields: Bool
@@ -31,8 +31,6 @@ struct ProfileSetupView: View {
         _bio = State(initialValue: initialBio)
         let colors = gradientColors ?? ProfileSetupView.generateRandomGradient()
         _gradientColors = State(initialValue: colors)
-        // Extract the two unique colors from the gradient pattern
-        _selectedColors = State(initialValue: Array(Set(colors)).sorted(by: { colors.firstIndex(of: $0)! < colors.firstIndex(of: $1)! }))
         self.buttonText = buttonText
         self.requireAllFields = requireAllFields
         self.isEditMode = isEditMode
@@ -68,26 +66,54 @@ struct ProfileSetupView: View {
                 )
                 .ignoresSafeArea()
                 
-                Form {
-                Section {
-                    StyledTextField(placeholder: "Name", text: $name)
-                        .listRowSeparator(.hidden)
-                    DatePickerField(
-                        title: "Set birthday",
-                        placeholder: "Add birthday",
-                        info: "Your birth year is kept private",
-                        selectedDate: $birthday
-                    )
-                        .listRowSeparator(.hidden)
-                    StyledTextField(placeholder: "Bio", text: $bio)
-                        .listRowSeparator(.hidden)
+                VStack(spacing: 0) {
+                    Form {
+                        Section {
+                            StyledTextField(placeholder: "Name", text: $name)
+                                .listRowSeparator(.hidden)
+                            DatePickerField(
+                                title: "Set birthday",
+                                placeholder: "Add birthday",
+                                info: "Your birth year is kept private",
+                                selectedDate: $birthday
+                            )
+                                .listRowSeparator(.hidden)
+                            StyledTextField(placeholder: "Bio", text: $bio)
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    .scrollContentBackground(.hidden)
+                    .onTapGesture {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+
+                    Button(action: { showColorPicker = true }) {
+                        HStack {
+                            Text("Gradient Colors")
+                                .foregroundColor(.textPrimary)
+                                .font(.headline)
+                            Spacer()
+                            HStack(spacing: Spacing.xs) {
+                                ForEach(Array(Set(gradientColors)).prefix(2), id: \.self) { color in
+                                    Circle()
+                                        .fill(color)
+                                        .frame(width: 32, height: 32)
+                                }
+                            }
+                        }
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(CornerRadius.lg)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                    .padding(.bottom)
                 }
-            }
-            .scrollContentBackground(.hidden)
-            .onTapGesture {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
+            
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showColorPicker) {
+                DisplayColorPickerSheet(gradientColors: $gradientColors)
+            }
             .toolbar {
                 Button {
                     saveProfile()
@@ -119,10 +145,7 @@ struct ProfileSetupView: View {
         isLoading = false
     }
     
-    private func updateGradient() {
-        guard selectedColors.count == 2 else { return }
-        gradientColors = (0..<9).map { selectedColors[$0 % 2] }
-    }
+
 }
 
 #Preview {
