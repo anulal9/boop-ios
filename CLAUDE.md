@@ -683,6 +683,25 @@ Persistence is handled in `BoopRangingView`:
 4. SwiftData automatically updates all `@Query` views (e.g. `BoopTimelineView`)
 5. `BoopTimelineView` separately listens to `latestBoopEvent` to show a display name overlay animation only
 
+## Bug Tracking (Notion)
+
+The project's bug tracker is a Notion database.
+
+- **Database ID:** `31855bc6-997b-80f7-a3b5-d29f798adc90`
+- **Data Source ID:** `31855bc6-997b-8143-978c-000ba690e1ae`
+
+### Fetching a Bug by ID
+
+Bugs use an auto-increment ID with the prefix `BUG-` (e.g., `BUG-1`, `BUG-12`). To look up a bug, search the database's data source using the numeric part of the ID:
+
+```
+Tool: mcp__notion__notion-search
+query: "<bug title or keyword>"
+data_source_url: "collection://31855bc6-997b-8143-978c-000ba690e1ae"
+```
+
+To fetch a specific bug by its `BUG-N` ID, first fetch the database, then find the entry whose `userDefined:ID` field matches the number N. You can also search by bug title keywords to find the relevant entry, then use `mcp__notion__notion-fetch` with the bug's page URL to get full details.
+
 ## Debugging Tips
 
 ### Build Errors
