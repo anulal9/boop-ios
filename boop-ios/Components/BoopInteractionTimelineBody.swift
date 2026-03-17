@@ -57,32 +57,58 @@ struct BoopInteractionTimelineBody: View {
 // MARK: - Shared Detail View
 
 struct BoopInteractionDetailView: View {
-    let interaction: BoopInteraction
+    @Bindable var interaction: BoopInteraction
+    @State private var isEditing = false
+    @State private var editEndDate: Date?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-            Text(interaction.title)
-                .heading2Style()
+        ScrollView {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                Text(interaction.title)
+                    .heading2Style()
 
-            Text("Start: \(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                .subtitleStyle()
-
-            if let end = interaction.endTimestamp {
-                Text("End: \(end, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                Text("Start: \(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
                     .subtitleStyle()
-            }
 
-            if !interaction.location.isEmpty {
-                Text("Location: \(interaction.location)")
-                    .subtitleStyle()
-            }
+                if isEditing {
+                    DatePickerField(
+                        title: "End",
+                        placeholder: "When did this boop end?",
+                        showTimePicker: true,
+                        selectedDate: $editEndDate
+                    )
+                } else {
+                    if let end = interaction.endTimestamp {
+                        Text("End: \(end, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                            .subtitleStyle()
+                    }
+                }
 
-            Spacer()
+                if !interaction.location.isEmpty {
+                    Text("Location: \(interaction.location)")
+                        .subtitleStyle()
+                }
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding()
         .navigationTitle("Boop Detail")
         .navigationBarTitleDisplayMode(.inline)
         .pageBackground()
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(isEditing ? "Done" : "Edit") {
+                    if isEditing {
+                        interaction.endTimestamp = editEndDate
+                    } else {
+                        editEndDate = interaction.endTimestamp
+                    }
+                    isEditing.toggle()
+                }
+                .foregroundColor(.accentPrimary)
+            }
+        }
     }
 }
