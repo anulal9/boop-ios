@@ -177,6 +177,20 @@ extension BoopManager: BoopDelegate {
         // Broadcast event (don't store in queue)
         // Note: Live activity is started in BoopTimelineView.handleNewBoop() where the interaction is created
         latestBoopEvent = BoopEvent(boop: boop)
+
+        // Send a boop back so the sender also gets the record.
+        // Skip if we already sent a boop to this device within the cooldown window
+        // (e.g. our UWB detected touching first, or we already sent back).
+        if let lastBoop = lastBoopTime[peripheralUUID],
+           Date().timeIntervalSince(lastBoop) < boopCooldown {
+            print("⏳ BoopManager: Skipping send-back boop to \(peripheralUUID.uuidString.prefix(8)) - cooldown active")
+        } else {
+            print("↩️ BoopManager: Sending boop back to \(peripheralUUID.uuidString.prefix(8))")
+            lastBoopTime[peripheralUUID] = Date()
+            Task {
+                _ = await self.sendBluetoothMessage(deviceId: peripheralUUID, messageType: .boop)
+            }
+        }
     }
 
     func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String]) {
