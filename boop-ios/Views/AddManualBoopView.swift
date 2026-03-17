@@ -15,7 +15,8 @@ struct AddManualBoopView: View {
 
     @State private var selectedContact: Contact?
     @State private var newContactName: String = ""
-    @State private var selectedDate: Date? = nil
+    @State private var startDate: Date? = nil
+    @State private var endDate: Date? = Date().addingTimeInterval(2 * 60 * 60)
 
     private var isUsingNewName: Bool {
         selectedContact == nil && !newContactName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -86,12 +87,20 @@ struct AddManualBoopView: View {
                         }
                     }
 
-                    // MARK: - Date & Time Picker
+                    // MARK: - Start & End Date/Time Pickers
                     DatePickerField(
-                        title: "Date & Time",
-                        placeholder: "When did this boop happen?",
+                        title: "Start",
+                        placeholder: "When did this boop start?",
                         showTimePicker: true,
-                        selectedDate: $selectedDate
+                        selectedDate: $startDate
+                    )
+                    .padding(.horizontal, Spacing.lg)
+
+                    DatePickerField(
+                        title: "End",
+                        placeholder: "When did this boop end?",
+                        showTimePicker: true,
+                        selectedDate: $endDate
                     )
                     .padding(.horizontal, Spacing.lg)
 
@@ -137,7 +146,8 @@ struct AddManualBoopView: View {
         let interaction = BoopInteraction(
             title: contact.displayName,
             location: "",
-            timestamp: selectedDate ?? Date(),
+            timestamp: startDate ?? Date(),
+            endTimestamp: endDate,
             contact: contact
         )
         modelContext.insert(interaction)

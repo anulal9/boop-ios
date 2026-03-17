@@ -64,8 +64,13 @@ struct BoopInteractionDetailView: View {
             Text(interaction.title)
                 .heading2Style()
 
-            Text(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+            Text("Start: \(interaction.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
                 .subtitleStyle()
+
+            if let end = interaction.endTimestamp {
+                Text("End: \(end, format: Date.FormatStyle(date: .numeric, time: .standard))")
+                    .subtitleStyle()
+            }
 
             if !interaction.location.isEmpty {
                 Text("Location: \(interaction.location)")
