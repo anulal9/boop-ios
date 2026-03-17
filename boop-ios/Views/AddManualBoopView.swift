@@ -14,54 +14,97 @@ struct AddManualBoopView: View {
     @Query private var contacts: [Contact]
 
     @State private var selectedContact: Contact?
-    @State private var newContactName: String = ""
+    @State private var searchText: String = ""
     @State private var startDate: Date? = nil
     @State private var endDate: Date? = Date().addingTimeInterval(2 * 60 * 60)
 
     private var isUsingNewName: Bool {
-        selectedContact == nil && !newContactName.trimmingCharacters(in: .whitespaces).isEmpty
+        selectedContact == nil && !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var canSave: Bool {
         selectedContact != nil || isUsingNewName
     }
 
+    private var filteredContacts: [Contact] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return [] }
+        return contacts.filter { $0.displayName.localizedCaseInsensitiveContains(query) }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: Spacing.lg) {
-                    // MARK: - New Contact Name
+                    // MARK: - Contact (typeahead with create fallback)
                     VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Or enter a new name")
+                        Text("Contact")
                             .subtitleStyle()
                             .padding(.horizontal, Spacing.lg)
 
-                        TextField("New contact name", text: $newContactName)
+                        TextField("Search or enter a name", text: $searchText)
                             .font(.body)
                             .foregroundColor(.textPrimary)
                             .padding(Spacing.md)
                             .background(Color.formBackgroundInactive)
                             .cornerRadius(CornerRadius.md)
-                            .padding(.horizontal, Spacing.lg)
-                            .onChange(of: newContactName) { _, newValue in
+                            .onChange(of: searchText) { _, newValue in
                                 if !newValue.trimmingCharacters(in: .whitespaces).isEmpty {
                                     selectedContact = nil
                                 }
                             }
-                    }
+                            .overlay(
+                                HStack {
+                                    Spacer()
+                                    if !searchText.isEmpty {
+                                        Button(action: { searchText = "" }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(.textMuted)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .padding(.trailing, Spacing.md)
+                                    }
+                                }
+                            )
+                            .padding(.horizontal, Spacing.lg)
 
-                    // MARK: - Existing Contacts
-                    if !contacts.isEmpty {
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("Select a contact")
-                                .subtitleStyle()
-                                .padding(.horizontal, Spacing.lg)
-
-                            LazyVStack(spacing: Spacing.sm) {
-                                ForEach(contacts) { contact in
+                        // Suggestions / existing contacts
+                        LazyVStack(spacing: Spacing.sm) {
+                            if filteredContacts.isEmpty {
+                                if !searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                                    Button {
+                                        // keep selectedContact nil; the entered text will be used as new contact on save
+                                        selectedContact = nil
+                                    } label: {
+                                        HStack {
+                                            Text("Create new: \(searchText.trimmingCharacters(in: .whitespaces))")
+                                                .font(.body)
+                                                .foregroundColor(.textPrimary)
+                                            Spacer()
+                                            if selectedContact == nil {
+                                                Image(systemName: "plus")
+                                                    .foregroundColor(.accentPrimary)
+                                            }
+                                        }
+                                        .padding(Spacing.md)
+                                        .background(Color.backgroundSecondary)
+                                        .cornerRadius(CornerRadius.md)
+                                    }
+                                    .padding(.horizontal, Spacing.lg)
+                                } else {
+                                    // No query and no contacts match (rare) — show empty state
+                                    if contacts.isEmpty {
+                                        Text("No contacts yet — enter a name to create one")
+                                            .font(.body)
+                                            .foregroundColor(.textMuted)
+                                            .padding(.horizontal, Spacing.lg)
+                                    }
+                                }
+                            } else {
+                                ForEach(filteredContacts) { contact in
                                     Button {
                                         selectedContact = contact
-                                        newContactName = ""
+                                        searchText = contact.displayName
                                     } label: {
                                         HStack {
                                             Text(contact.displayName)
@@ -137,7 +180,7 @@ struct AddManualBoopView: View {
         if let existing = selectedContact {
             contact = existing
         } else {
-            let trimmedName = newContactName.trimmingCharacters(in: .whitespaces)
+            let trimmedName = searchText.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
             guard !trimmedName.isEmpty else { return }
             contact = Contact(uuid: UUID(), displayName: trimmedName)
             modelContext.insert(contact)
