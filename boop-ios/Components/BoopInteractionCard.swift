@@ -17,13 +17,13 @@ struct BoopInteractionCard: View {
             HStack(spacing: Spacing.md) {
                 // Thumbnail(s)
                 thumbnailView
-                    .frame(width: thumbnailWidth, height: ThumbnailSize.single)
+                    .frame(width: thumbnailWidth, height: ThumbnailSize.compact)
 
                 // Content
                 VStack(alignment: .leading, spacing: LayoutConstant.cardContentGap) {
                     // Title
                     Text(interaction.title)
-                        .font(.heading2)
+                        .font(.heading3)
                         .foregroundColor(.textSecondary)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -49,7 +49,7 @@ struct BoopInteractionCard: View {
                     .frame(width: IconSize.xsmall)
             }
             .padding(.horizontal, Spacing.lg)
-            .frame(height: ComponentSize.cardHeight)
+            .frame(height: ComponentSize.cardHeightCompact)
         }
         .buttonStyle(PlainButtonStyle())
         .cardStyle()
@@ -73,9 +73,9 @@ struct BoopInteractionCard: View {
 
     private var thumbnailWidth: CGFloat {
         switch interaction.thumbnailCount {
-        case 1: return ThumbnailSize.single
-        case 2: return ThumbnailSize.doubleWidth
-        case 3...: return ThumbnailSize.tripleWidth
+        case 1: return ThumbnailSize.compact
+        case 2: return ThumbnailSize.compactDoubleWidth
+        case 3...: return ThumbnailSize.compactTripleWidth
         default: return 0
         }
     }
@@ -88,7 +88,7 @@ struct BoopInteractionCard: View {
                 Circle()
                     .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
             )
-            .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
+            .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
     }
 
     // Two thumbnails slightly overlapping
@@ -101,8 +101,8 @@ struct BoopInteractionCard: View {
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
                 )
-                .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
-                .position(x: ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
+                .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
+                .position(x: ThumbnailSize.compact / 2, y: ThumbnailSize.compact / 2)
 
             // Right thumbnail (front)
             Circle()
@@ -111,10 +111,10 @@ struct BoopInteractionCard: View {
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
                 )
-                .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
-                .position(x: ThumbnailOffset.double + ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
+                .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
+                .position(x: ThumbnailOffset.compactDouble + ThumbnailSize.compact / 2, y: ThumbnailSize.compact / 2)
         }
-        .frame(width: ThumbnailSize.doubleWidth, height: ThumbnailSize.single, alignment: .leading)
+        .frame(width: ThumbnailSize.compactDoubleWidth, height: ThumbnailSize.compact, alignment: .leading)
     }
 
     // Three overlapping thumbnails
@@ -127,8 +127,8 @@ struct BoopInteractionCard: View {
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
                 )
-                .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
-                .position(x: ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
+                .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
+                .position(x: ThumbnailSize.compact / 2, y: ThumbnailSize.compact / 2)
 
             // Middle thumbnail
             Circle()
@@ -137,8 +137,8 @@ struct BoopInteractionCard: View {
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
                 )
-                .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
-                .position(x: ThumbnailOffset.middle + ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
+                .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
+                .position(x: ThumbnailOffset.compactMiddle + ThumbnailSize.compact / 2, y: ThumbnailSize.compact / 2)
 
             // Back thumbnail (rightmost)
             Circle()
@@ -147,10 +147,10 @@ struct BoopInteractionCard: View {
                     Circle()
                         .strokeBorder(Color.accentPrimary, lineWidth: ThumbnailSize.borderWidth)
                 )
-                .frame(width: ThumbnailSize.single, height: ThumbnailSize.single)
-                .position(x: ThumbnailOffset.back + ThumbnailSize.single / 2, y: ThumbnailSize.single / 2)
+                .frame(width: ThumbnailSize.compact, height: ThumbnailSize.compact)
+                .position(x: ThumbnailOffset.compactBack + ThumbnailSize.compact / 2, y: ThumbnailSize.compact / 2)
         }
-        .frame(width: ThumbnailSize.tripleWidth, height: ThumbnailSize.single, alignment: .leading)
+        .frame(width: ThumbnailSize.compactTripleWidth, height: ThumbnailSize.compact, alignment: .leading)
     }
 
     // MARK: - Helper Views

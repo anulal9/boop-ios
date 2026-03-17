@@ -30,6 +30,11 @@ extension Font {
     static let heading2 = Font.system(size: 24, weight: .semibold)
         .leading(.init(1.1))
 
+    /// Heading 3 font style: SF Pro Semibold, 18pt
+    /// Used for compact card titles
+    static let heading3 = Font.system(size: 18, weight: .semibold)
+        .leading(.init(1.1))
+
     /// Whimsical Primary font style: Candal, 32pt
     /// Special decorative font
     static let whimsicalPrimary = Font.custom("Candal", size: 32)
@@ -58,6 +63,8 @@ extension View {
             return self.lineSpacing(31.64 - 28)  // lineHeight 1.13 * fontSize
         case .heading2:
             return self.lineSpacing(26.4 - 24)  // lineHeight 1.1 * fontSize
+        case .heading3:
+            return self.lineSpacing(19.8 - 18)  // lineHeight 1.1 * fontSize
         case .whimsicalPrimary:
             return self.lineSpacing(40 - 32)  // lineHeight 1.25 * fontSize
         }
@@ -69,5 +76,6 @@ enum TypographyStyle {
     case subtitle
     case heading1
     case heading2
+    case heading3
     case whimsicalPrimary
 }

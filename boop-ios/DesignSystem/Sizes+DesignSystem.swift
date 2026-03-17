@@ -12,6 +12,9 @@ enum ComponentSize {
     /// Standard card height: 96pt
     static let cardHeight: CGFloat = 96
 
+    /// Compact card height: 80pt
+    static let cardHeightCompact: CGFloat = 80
+
     /// Standard button/thumbnail size: 44pt
     static let buttonSize: CGFloat = 44
 
@@ -24,11 +27,20 @@ enum ThumbnailSize {
     /// Single thumbnail size: 44pt
     static let single: CGFloat = 44
 
+    /// Compact single thumbnail size: 36pt
+    static let compact: CGFloat = 36
+
     /// Double thumbnail container width: 76pt
     static let doubleWidth: CGFloat = 76
 
+    /// Compact double thumbnail container width: 62pt
+    static let compactDoubleWidth: CGFloat = 62
+
     /// Triple thumbnail container width: 98pt
     static let tripleWidth: CGFloat = 98
+
+    /// Compact triple thumbnail container width: 80pt
+    static let compactTripleWidth: CGFloat = 80
 
     /// Thumbnail border width: 2pt
     static let borderWidth: CGFloat = 2
@@ -41,11 +53,20 @@ enum ThumbnailOffset {
     /// So offset = 44 - 12 = 32pt
     static let double: CGFloat = 32
 
+    /// Compact offset for second thumbnail: 26pt
+    static let compactDouble: CGFloat = 26
+
     /// Offset for middle thumbnail in triple stack: 27pt
     static let middle: CGFloat = 27
 
+    /// Compact offset for middle thumbnail: 22pt
+    static let compactMiddle: CGFloat = 22
+
     /// Offset for back thumbnail in triple stack: 54pt
     static let back: CGFloat = 54
+
+    /// Compact offset for back thumbnail: 44pt
+    static let compactBack: CGFloat = 44
 }
 
 // MARK: - Icon Sizes
