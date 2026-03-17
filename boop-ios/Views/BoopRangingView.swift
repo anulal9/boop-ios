@@ -11,6 +11,7 @@ import SwiftData
 struct BoopRangingView: View {
     var isPresented: Binding<Bool>?
     @EnvironmentObject var boopManager: BoopManager
+    @EnvironmentObject var locationManager: LocationManager
     @Environment(\.modelContext) private var modelContext
     @Query private var contacts: [Contact]
     @Query(sort: \BoopInteraction.timestamp, order: .reverse)
@@ -119,12 +120,17 @@ struct BoopRangingView: View {
             return
         }
 
+        // Capture current location path and name
+        let pathCoords = locationManager.snapshotPath()
+        let locationName = locationManager.currentLocationName
+
         // Create interaction with contact relationship
         let newInteraction = BoopInteraction(
             title: boop.displayName,
-            location: "temp - todo",
+            location: locationName,
             timestamp: event.timestamp,
-            contact: contact  // Set relationship
+            contact: contact,
+            pathCoordinates: pathCoords
         )
         modelContext.insert(newInteraction)  // Insert as top-level entity
         contact.interactions.append(newInteraction)  // Also add to contact's array

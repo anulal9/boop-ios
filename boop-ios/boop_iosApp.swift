@@ -14,6 +14,7 @@ struct boop_iosApp: App {
     private var modelConfiguration: ModelConfiguration
     @State var sharedModelContainer: ModelContainer?
     @StateObject private var boopManager = BoopManager()
+    @StateObject private var locationManager = LocationManager()
     @State private var selectedTab: Int = 0
     @State private var selectedInteractionID: UUID?
 
@@ -67,6 +68,7 @@ struct boop_iosApp: App {
                     RootView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID)
                         .modelContainer(container)
                         .environmentObject(boopManager)
+                        .environmentObject(locationManager)
                         .onOpenURL { url in
                             handleURL(url)
                         }
@@ -81,6 +83,7 @@ struct boop_iosApp: App {
             }
             .task {
                 await setModelContainer()
+                locationManager.requestPermissionIfNeeded()
                 let granted = await NotificationManager.shared.requestAuthorization()
                 if let container = sharedModelContainer {
                     let scheduler = NotificationScheduler(modelContainer: container)
