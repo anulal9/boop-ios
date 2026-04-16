@@ -117,7 +117,6 @@ class BluetoothManager: NSObject, ObservableObject {
     func printDiagnostics() {
         print("🔍 === BLUETOOTH MANAGER DIAGNOSTICS ===")
         print("🔍 Connected peripherals: \(connectedPeripherals.count)")
-        print("🔍 UWB Manager exists: \(uwbManager != nil)")
 
         if let uwbMgr = uwbManager as? UWBManager {
             uwbMgr.printDiagnostics()
@@ -167,16 +166,18 @@ extension BluetoothManager: BluetoothServiceDelegate {
             print("✅ BT Manager: Added peripheral to connectedPeriphals - total: \(connectedPeripherals.count)")
         }
         uwbManager.registerPeer(to: deviceID)
+        service.boopDelegate?.didDeviceConnect(peripheralUUID: deviceID)
         print("📊 BT Manager: State after discovery - discoveredDevices: \(discoveredDevices.count), connectedPeripherals: \(connectedPeripherals.count)")
     }
 
     func didDisconnect(from deviceID: UUID) {
         print("🔌 BT Manager: didDisconnect(\(deviceID.uuidString.prefix(8)))")
-        
+
         connectedPeripherals.removeValue(forKey: deviceID)
         discoveredDevices.removeValue(forKey: deviceID)
         uwbManager.stopRanging(to: deviceID)
-        
+        service.boopDelegate?.didDeviceDisconnect(peripheralUUID: deviceID)
+
         print("✅ BT Manager: Removed from connectedPeripherals - total: \(connectedPeripherals.count)")
         print("📊 BT Manager: State after disconnect - discoveredDevices: \(discoveredDevices.count), connectedPeripherals: \(connectedPeripherals.count)")
     }

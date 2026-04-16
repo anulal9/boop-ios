@@ -17,12 +17,7 @@ struct BoopInteractionCard: View {
     var body: some View {
         Button(action: { onTap?() }) {
             VStack(spacing: 0) {
-                // Map (shown only when coordinates are available)
-                let coords = interaction.pathCoordinates
-                if !coords.isEmpty {
-                    pathMapView(coordinates: coords)
-                }
-
+            
                 // Content row
                 HStack(spacing: Spacing.md) {
                     // Thumbnail(s)
@@ -66,40 +61,6 @@ struct BoopInteractionCard: View {
         }
         .buttonStyle(PlainButtonStyle())
         .cardStyle()
-    }
-
-    // MARK: - Map View
-
-    @ViewBuilder
-    private func pathMapView(coordinates: [CLLocationCoordinate2D]) -> some View {
-        Map(initialPosition: mapCameraPosition(for: coordinates), interactionModes: []) {
-            if coordinates.count > 1 {
-                MapPolyline(coordinates: coordinates)
-                    .stroke(.accentPrimary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-            }
-            // Mark the boop location (last coordinate = where the boop happened)
-            if let boopPoint = coordinates.last {
-                Annotation("", coordinate: boopPoint) {
-                    Circle()
-                        .fill(.accentPrimary)
-                        .frame(width: 10, height: 10)
-                        .overlay(
-                            Circle()
-                                .strokeBorder(Color.white, lineWidth: 2)
-                        )
-                }
-            }
-        }
-        .frame(height: MapSize.cardMapHeight)
-        .clipShape(
-            UnevenRoundedRectangle(
-                topLeadingRadius: CornerRadius.md,
-                bottomLeadingRadius: 0,
-                bottomTrailingRadius: 0,
-                topTrailingRadius: CornerRadius.md
-            )
-        )
-        .allowsHitTesting(false)
     }
 
     // MARK: - Thumbnail Views
@@ -222,32 +183,6 @@ struct BoopInteractionCard: View {
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date.now)
-    }
-
-    private func mapCameraPosition(for coordinates: [CLLocationCoordinate2D]) -> MapCameraPosition {
-        guard !coordinates.isEmpty else { return .automatic }
-
-        if coordinates.count == 1 {
-            return .region(MKCoordinateRegion(
-                center: coordinates[0],
-                span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
-            ))
-        }
-
-        let minLat = coordinates.map(\.latitude).min()!
-        let maxLat = coordinates.map(\.latitude).max()!
-        let minLon = coordinates.map(\.longitude).min()!
-        let maxLon = coordinates.map(\.longitude).max()!
-
-        let center = CLLocationCoordinate2D(
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLon + maxLon) / 2
-        )
-        let span = MKCoordinateSpan(
-            latitudeDelta: max((maxLat - minLat) * 1.4, 0.002),
-            longitudeDelta: max((maxLon - minLon) * 1.4, 0.002)
-        )
-        return .region(MKCoordinateRegion(center: center, span: span))
     }
 }
 

@@ -17,11 +17,11 @@ final class LocationManager: NSObject, ObservableObject {
 
     private let clManager = CLLocationManager()
 
-    // Rolling buffer of recent coordinates (up to maxBufferSize)
-    private var coordinateBuffer: [CLLocationCoordinate2D] = []
-    private let maxBufferSize = 50
+    // Rolling buffer of recent coordinates with timestamps (up to maxBufferSize)
+    private var coordinateBuffer: [(timestamp: Date, coordinate: CLLocationCoordinate2D)] = []
+    private let maxBufferSize = 3500
     // Minimum distance (meters) between recorded points to avoid GPS noise
-    private let minDistanceBetweenPoints: Double = 5.0
+    private let minDistanceBetweenPoints: Double = 1.0
 
     override init() {
         super.init()
@@ -56,17 +56,29 @@ final class LocationManager: NSObject, ObservableObject {
 
     /// Returns a snapshot of the current path buffer for storage with a boop.
     func snapshotPath() -> [CLLocationCoordinate2D] {
+        return coordinateBuffer.map(\.coordinate)
+    }
+
+    /// Returns coordinates recorded between two timestamps.
+    func getLocations(from startDate: Date, to endDate: Date) -> [CLLocationCoordinate2D] {
+        for entry in coordinateBuffer {
+            print("----------")
+            print(entry.timestamp, ", ", entry.coordinate)
+        }
+        print("----------")
         return coordinateBuffer
+            .filter { $0.timestamp >= startDate && $0.timestamp <= endDate }
+            .map(\.coordinate)
     }
 
     /// Returns the current single coordinate for use when there's no path.
     func currentCoordinate() -> CLLocationCoordinate2D? {
-        return coordinateBuffer.last
+        return coordinateBuffer.last?.coordinate
     }
 
     /// Reverse geocodes the most recent coordinate to a human-readable location name.
     func reverseGeocodeCurrentLocation() async -> String {
-        guard let coordinate = coordinateBuffer.last else { return "" }
+        guard let coordinate = coordinateBuffer.last?.coordinate else { return "" }
         return await reverseGeocode(coordinate)
     }
 
@@ -119,29 +131,34 @@ extension LocationManager: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let newLocation = locations.last,
-              newLocation.horizontalAccuracy > 0,
-              newLocation.horizontalAccuracy < 50 else { return }
+              newLocation.horizontalAccuracy > 0 else { return }
+
+        let accuracy = newLocation.horizontalAccuracy
+        let coordinate = newLocation.coordinate
 
         Task { @MainActor in
-            appendToBuffer(newLocation.coordinate)
+            appendToBuffer(coordinate)
         }
     }
 
     private func appendToBuffer(_ coordinate: CLLocationCoordinate2D) {
         // Filter out points too close to the last recorded point
+        print("appending coordinate to buffer")
         if let last = coordinateBuffer.last {
-            let lastLocation = CLLocation(latitude: last.latitude, longitude: last.longitude)
+            let lastLocation = CLLocation(latitude: last.coordinate.latitude, longitude: last.coordinate.longitude)
             let newLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
             guard newLocation.distance(from: lastLocation) >= minDistanceBetweenPoints else { return }
         }
 
-        coordinateBuffer.append(coordinate)
+        coordinateBuffer.append((timestamp: Date(),
+                                 coordinate: coordinate))
+        print("appended coordinate: ", coordinate)
         if coordinateBuffer.count > maxBufferSize {
             coordinateBuffer.removeFirst()
         }
 
-        // Reverse-geocode in the background on significant location changes (every ~5 new points)
-        if coordinateBuffer.count % 5 == 1 {
+        // Reverse-geocode in the background on significant location changes (every ~20 new points)
+        if coordinateBuffer.count % 20 == 1 {
             Task {
                 let name = await reverseGeocode(coordinate)
                 if !name.isEmpty {

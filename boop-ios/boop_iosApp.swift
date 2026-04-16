@@ -84,6 +84,11 @@ struct boop_iosApp: App {
             .task {
                 await setModelContainer()
                 locationManager.requestPermissionIfNeeded()
+                if let container = sharedModelContainer {
+                    boopManager.setModelContainer(container)
+                }
+                boopManager.setLocationManager(locationManager)
+                boopManager.start()
                 let granted = await NotificationManager.shared.requestAuthorization()
                 if let container = sharedModelContainer {
                     let scheduler = NotificationScheduler(modelContainer: container)
