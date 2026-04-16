@@ -28,6 +28,8 @@ protocol BluetoothServiceDelegate: AnyObject {
 protocol BoopDelegate: AnyObject {
     func didReceiveBoop(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
     func didReceiveBoopRequest(from senderUUID: UUID, peripheralUUID: UUID, displayName: String, birthday: Date?, bio: String?, gradientColors: [String])
+    func didDeviceConnect(peripheralUUID: UUID)
+    func didDeviceDisconnect(peripheralUUID: UUID)
 }
 
 // MARK: - Service Protocol

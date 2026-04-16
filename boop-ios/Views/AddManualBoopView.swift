@@ -11,6 +11,7 @@ import SwiftData
 struct AddManualBoopView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var locationManager: LocationManager
     @Query private var contacts: [Contact]
 
     @State private var selectedContact: Contact?
@@ -188,10 +189,11 @@ struct AddManualBoopView: View {
 
         let interaction = BoopInteraction(
             title: contact.displayName,
-            location: "",
+            location: locationManager.currentLocationName,
             timestamp: startDate ?? Date(),
             endTimestamp: endDate,
-            contact: contact
+            contact: contact,
+            pathCoordinates: locationManager.snapshotPath()
         )
         modelContext.insert(interaction)
         contact.interactions.append(interaction)
