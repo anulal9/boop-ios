@@ -61,11 +61,6 @@ final class LocationManager: NSObject, ObservableObject {
 
     /// Returns coordinates recorded between two timestamps.
     func getLocations(from startDate: Date, to endDate: Date) -> [CLLocationCoordinate2D] {
-        for entry in coordinateBuffer {
-            print("----------")
-            print(entry.timestamp, ", ", entry.coordinate)
-        }
-        print("----------")
         return coordinateBuffer
             .filter { $0.timestamp >= startDate && $0.timestamp <= endDate }
             .map(\.coordinate)
@@ -131,7 +126,7 @@ extension LocationManager: CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let newLocation = locations.last,
-              newLocation.horizontalAccuracy > 0 else { return }
+              newLocation.horizontalAccuracy > 0.1 else { return }
 
         let accuracy = newLocation.horizontalAccuracy
         let coordinate = newLocation.coordinate
@@ -143,7 +138,6 @@ extension LocationManager: CLLocationManagerDelegate {
 
     private func appendToBuffer(_ coordinate: CLLocationCoordinate2D) {
         // Filter out points too close to the last recorded point
-        print("appending coordinate to buffer")
         if let last = coordinateBuffer.last {
             let lastLocation = CLLocation(latitude: last.coordinate.latitude, longitude: last.coordinate.longitude)
             let newLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
@@ -152,7 +146,6 @@ extension LocationManager: CLLocationManagerDelegate {
 
         coordinateBuffer.append((timestamp: Date(),
                                  coordinate: coordinate))
-        print("appended coordinate: ", coordinate)
         if coordinateBuffer.count > maxBufferSize {
             coordinateBuffer.removeFirst()
         }
