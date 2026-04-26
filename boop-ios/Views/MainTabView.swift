@@ -4,7 +4,8 @@ import SwiftUI
 struct MainTabView: View {
     @Binding var selectedTab: Int
     @Binding var selectedInteractionID: UUID?
-    
+    @Binding var selectedContactID: UUID?
+
     var body: some View {
         TabView(selection: $selectedTab) {
             BoopTimelineView(selectedInteractionID: $selectedInteractionID)
@@ -18,7 +19,7 @@ struct MainTabView: View {
                     Label("Boop", systemImage: "hand.tap.fill")
                 }
 
-            ContactsView()
+            ContactsView(selectedContactID: $selectedContactID)
                 .tabItem {
                     Label("Contacts", systemImage: "person.2")
                 }
@@ -34,5 +35,5 @@ struct MainTabView: View {
 }
 
 #Preview {
-    MainTabView(selectedTab: .constant(0), selectedInteractionID: .constant(nil))
+    MainTabView(selectedTab: .constant(0), selectedInteractionID: .constant(nil), selectedContactID: .constant(nil))
 }

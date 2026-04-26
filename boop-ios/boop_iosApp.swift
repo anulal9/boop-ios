@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct boop_iosApp: App {
@@ -17,6 +18,7 @@ struct boop_iosApp: App {
     @StateObject private var locationManager = LocationManager()
     @State private var selectedTab: Int = 0
     @State private var selectedInteractionID: UUID?
+    @State private var selectedContactID: UUID?
 
     init() {
         self.schema = Schema([
@@ -65,7 +67,7 @@ struct boop_iosApp: App {
         WindowGroup {
             Group {
                 if let container = sharedModelContainer {
-                    RootView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID)
+                    RootView(selectedTab: $selectedTab, selectedInteractionID: $selectedInteractionID, selectedContactID: $selectedContactID)
                         .modelContainer(container)
                         .environmentObject(boopManager)
                         .environmentObject(locationManager)
@@ -82,10 +84,12 @@ struct boop_iosApp: App {
                 }
             }
             .task {
+                UNUserNotificationCenter.current().delegate = NotificationResponseHandler.shared
                 await setModelContainer()
                 locationManager.requestPermissionIfNeeded()
                 if let container = sharedModelContainer {
                     ModelContextProvider.shared.setModelContainer(container)
+                    boopManager.setModelContainer(container)
                 }
                 boopManager.setLocationManager(locationManager)
                 boopManager.start()
@@ -102,8 +106,15 @@ struct boop_iosApp: App {
                                 every: .weekly
                             )
                         )
+                        await scheduler.syncContactReminders()
                     }
                 }
+            }
+            .onReceive(NotificationResponseHandler.shared.$pendingContactUUID) { uuid in
+                guard let uuid else { return }
+                selectedContactID = uuid
+                selectedTab = 1
+                NotificationResponseHandler.shared.pendingContactUUID = nil
             }
         }
     }

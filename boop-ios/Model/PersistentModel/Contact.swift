@@ -17,18 +17,21 @@ final class Contact {
     var birthday: Date?
     var bio: String?
     var gradientColorsData: [String] = []
+    var createdAt: Date?
+    var reminderIntervalMinutes: Int?
 
     // Relationship with cascade delete - when Contact is deleted, its interactions are too
     @Relationship(deleteRule: .cascade, inverse: \BoopInteraction.contact)
     var interactions: [BoopInteraction]
 
-    init(uuid: UUID, displayName: String, birthday: Date? = nil, bio: String? = nil, gradientColors: [Color] = [], interactions: [BoopInteraction] = []) {
+    init(uuid: UUID, displayName: String, birthday: Date? = nil, bio: String? = nil, gradientColors: [Color] = [], interactions: [BoopInteraction] = [], createdAt: Date? = Date()) {
         self.uuid = uuid
         self.displayName = displayName
         self.birthday = birthday
         self.bio = bio
         self.gradientColorsData = gradientColors.map { Self.colorToString($0) }
         self.interactions = interactions
+        self.createdAt = createdAt
     }
     
     var gradientColors: [Color] {

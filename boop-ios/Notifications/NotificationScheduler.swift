@@ -83,6 +83,38 @@ actor NotificationScheduler {
         }
     }
 
+    // MARK: - Contact Reminders
+
+    /// Default reminder interval in minutes. Change back to 14 * 24 * 60 for production.
+    static let defaultReminderIntervalMinutes = 1
+
+    /// Schedule (or reschedule) a one-shot reminder for every contact.
+    /// Called on app launch and whenever the contact list changes.
+    func syncContactReminders() async {
+        let contacts = (try? modelContext.fetch(FetchDescriptor<Contact>())) ?? []
+        for contact in contacts {
+            let lastSeen = contact.interactions
+                .max(by: { $0.timestamp < $1.timestamp })?
+                .timestamp ?? contact.createdAt ?? Date()
+            let interval = contact.reminderIntervalMinutes ?? NotificationScheduler.defaultReminderIntervalMinutes
+            let nextFire = NotificationScheduler.nextReminderDate(after: lastSeen, intervalMinutes: interval)
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: nextFire
+            )
+            await setSchedule(
+                type: .contactReminder(contactName: contact.displayName, contactUUID: contact.uuid),
+                trigger: .once(on: components)
+            )
+        }
+    }
+
+    /// Returns the date `intervalMinutes` after `referenceDate`.
+    /// If the computed date is already in the past, returns now + 10 seconds.
+    static func nextReminderDate(after referenceDate: Date, intervalMinutes: Int = defaultReminderIntervalMinutes) -> Date {
+        let target = referenceDate.addingTimeInterval(TimeInterval(intervalMinutes * 60))
+        return target > Date() ? target : Date().addingTimeInterval(10)
+    }
+
     // MARK: - Private
 
     private func fetchIntent(typeIdentifier: NotificationTypeIdentifier, entityUUID: UUID?) -> NotificationIntent? {

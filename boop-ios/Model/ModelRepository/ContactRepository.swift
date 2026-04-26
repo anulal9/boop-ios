@@ -59,9 +59,30 @@ final class ContactRepository {
 
     // MARK: - Delete
 
-    /// Delete a contact (cascades to its interactions).
+    /// Delete a contact (cascades to its interactions) and cancels its pending reminder.
     func delete(_ contact: Contact) {
-        modelContext?.delete(contact)
+        guard let modelContext else { return }
+
+        // Cancel and remove any pending contact reminder for this contact
+        let contactUUID = contact.uuid
+        let descriptor = FetchDescriptor<NotificationIntent>(
+            predicate: #Predicate { $0.entityUUID == contactUUID }
+        )
+        if let intent = (try? modelContext.fetch(descriptor))?.first {
+            let notifId = intent.notificationIdentifier
+            modelContext.delete(intent)
+            Task {
+                await NotificationManager.shared.cancel(identifier: notifId)
+            }
+        }
+
+        modelContext.delete(contact)
+        save()
+    }
+
+    /// Update the reminder interval for a contact and persist.
+    func updateReminderInterval(_ contact: Contact, intervalMinutes: Int?) {
+        contact.reminderIntervalMinutes = intervalMinutes
         save()
     }
 

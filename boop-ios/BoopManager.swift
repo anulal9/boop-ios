@@ -4,6 +4,7 @@ import CoreLocation
 import Combine
 import UIKit
 import SwiftUI
+import SwiftData
 
 // MARK: - Boop Manager
 /// Manages the queue of devices that are in "boop" range (touching distance)
@@ -27,6 +28,7 @@ class BoopManager: NSObject, ObservableObject {
     // MARK: - Dependencies
     private var bluetoothManager: BluetoothManager?
     private var locationManager: LocationManager?
+    private var modelContainer: ModelContainer?
 
     // MARK: - Private Properties
     private var cancellables = Set<AnyCancellable>()
@@ -52,6 +54,29 @@ class BoopManager: NSObject, ObservableObject {
 
     func setLocationManager(_ manager: LocationManager) {
         self.locationManager = manager
+    }
+
+    func setModelContainer(_ container: ModelContainer) {
+        self.modelContainer = container
+    }
+
+    /// Reschedule (or create) the reminder for a specific contact using their custom interval.
+    func rescheduleReminder(for contact: Contact) {
+        guard let container = modelContainer else { return }
+        let contactName = contact.displayName
+        let contactUUID = contact.uuid
+        let intervalMinutes = contact.reminderIntervalMinutes ?? NotificationScheduler.defaultReminderIntervalMinutes
+        Task {
+            let scheduler = NotificationScheduler(modelContainer: container)
+            let nextFire = NotificationScheduler.nextReminderDate(after: Date(), intervalMinutes: intervalMinutes)
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: nextFire
+            )
+            await scheduler.setSchedule(
+                type: .contactReminder(contactName: contactName, contactUUID: contactUUID),
+                trigger: .once(on: components)
+            )
+        }
     }
 
     private func getOrCreateBluetoothManager() -> BluetoothManager {
@@ -219,6 +244,9 @@ class BoopManager: NSObject, ObservableObject {
             contactID: boop.senderUUID,
             interactionID: interaction.id
         )
+
+        // Reset the reminder clock for this contact
+        rescheduleReminder(for: contact)
     }
 
     // MARK: - Session End Handling

@@ -9,11 +9,13 @@ import SwiftUI
 import SwiftData
 
 struct ContactsView: View {
+    @Binding var selectedContactID: UUID?
     @Query private var contacts: [Contact]
     @State private var showBoopRanging = false
+    @State private var navPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             ScrollView {
                 LazyVStack {
                     ForEach(contacts) { contact in
@@ -53,7 +55,13 @@ struct ContactsView: View {
             .sheet(isPresented: $showBoopRanging) {
                 BoopRangingView(isPresented: $showBoopRanging)
             }
-
+            .onChange(of: selectedContactID) { _, uuid in
+                guard let uuid else { return }
+                if let contact = contacts.first(where: { $0.uuid == uuid }) {
+                    navPath.append(contact)
+                }
+                selectedContactID = nil
+            }
         }
     }
 
@@ -74,6 +82,6 @@ func buildContactCard(contact: Contact) -> some View {
 }
 
 #Preview {
-    ContactsView()
+    ContactsView(selectedContactID: .constant(nil))
         .modelContainer(for: Contact.self, inMemory: true)
 }
