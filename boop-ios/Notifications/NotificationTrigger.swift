@@ -69,6 +69,9 @@ enum NotificationTrigger {
             intent.triggerWeekday = components.weekday
             intent.triggerHour = components.hour
             intent.triggerMinute = components.minute
+            intent.triggerYear = components.year
+            intent.triggerMonth = components.month
+            intent.triggerDay = components.day
         case .cadence(let components, let interval):
             intent.triggerInterval = interval
             intent.triggerWeekday = components.weekday
@@ -84,6 +87,9 @@ enum NotificationTrigger {
             dc.weekday = intent.triggerWeekday
             dc.hour = intent.triggerHour
             dc.minute = intent.triggerMinute
+            dc.year = intent.triggerYear
+            dc.month = intent.triggerMonth
+            dc.day = intent.triggerDay
             return dc
         }
 

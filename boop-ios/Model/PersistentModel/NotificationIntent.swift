@@ -25,6 +25,10 @@ final class NotificationIntent {
     var triggerWeekday: Int?        // 1=Sunday ... 7=Saturday
     var triggerHour: Int?
     var triggerMinute: Int?
+    // Date-specific fields for .once triggers (year/month/day not needed for repeating cadences)
+    var triggerYear: Int?
+    var triggerMonth: Int?
+    var triggerDay: Int?
 
     var isActive: Bool
     var createdAt: Date

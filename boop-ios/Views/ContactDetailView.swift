@@ -15,10 +15,19 @@ struct BoopHistoryRoute: Hashable {
 
 struct ContactDetailView: View {
     let contact: Contact
+    @EnvironmentObject private var boopManager: BoopManager
+
+    private let reminderOptions: [(label: String, minutes: Int?)] = [
+        ("Default (\(NotificationScheduler.defaultReminderIntervalMinutes) min)", nil),
+        ("1 minute", 1),
+        ("1 hour", 60),
+        ("1 week", 7 * 24 * 60),
+        ("2 weeks", 14 * 24 * 60),
+        ("1 month", 30 * 24 * 60),
+    ]
 
     var body: some View {
         ZStack {
-            // Use contact's gradient colors as background
             AnimatedMeshGradient(
                 colors: contact.gradientColors,
                 animationStyle: .horizontalWave,
@@ -36,6 +45,24 @@ struct ContactDetailView: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
+
+                // Reminder frequency
+                Section {
+                    Picker("Remind me every", selection: Binding(
+                        get: { contact.reminderIntervalMinutes },
+                        set: { newValue in
+                            ContactRepository.shared.updateReminderInterval(contact, intervalMinutes: newValue)
+                            boopManager.rescheduleReminder(for: contact)
+                        }
+                    )) {
+                        ForEach(reminderOptions, id: \.label) { option in
+                            Text(option.label).tag(option.minutes)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .foregroundColor(.staticWhite)
+                }
+                .listRowBackground(Color.clear)
 
                 // Interaction History Section
                 Section {
